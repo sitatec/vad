@@ -1,3 +1,5 @@
+// vad_handler.dart
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:js_interop';
@@ -20,8 +22,9 @@ external void logMessage(String message);
 @JS('callDartFunction')
 external void executeDartHandler();
 
+
 class VADHandler {
-  final StreamController<String> _onSpeechEndController = StreamController<String>.broadcast();
+  final StreamController<List<double>> _onSpeechEndController = StreamController<List<double>>.broadcast();
   final StreamController<void> _onSpeechStartController = StreamController<void>.broadcast();
   final StreamController<void> _onVADMisfireController = StreamController<void>.broadcast();
   final StreamController<String> _onErrorController = StreamController<String>.broadcast();
@@ -30,12 +33,20 @@ class VADHandler {
     globalContext['executeDartHandler'] = handleEvent.toJS;
   }
 
-  Stream<String> get onSpeechEnd => _onSpeechEndController.stream;
+  Stream<List<double>> get onSpeechEnd => _onSpeechEndController.stream;
   Stream<void> get onSpeechStart => _onSpeechStartController.stream;
   Stream<void> get onVADMisfire => _onVADMisfireController.stream;
   Stream<String> get onError => _onErrorController.stream;
 
-  void startListening({positiveSpeechThreshold = 0.5, negativeSpeechThreshold = 0.5 - 0.15, preSpeechPadFrames = 1, redemptionFrames = 8, frameSamples = 1536, minSpeechFrames = 3, submitUserSpeechOnPause = false}) {
+  void startListening({
+    double positiveSpeechThreshold = 0.5,
+    double negativeSpeechThreshold = 0.35,
+    int preSpeechPadFrames = 1,
+    int redemptionFrames = 8,
+    int frameSamples = 1536,
+    int minSpeechFrames = 3,
+    bool submitUserSpeechOnPause = false
+  }) {
     startListeningImpl(
         positiveSpeechThreshold,
         negativeSpeechThreshold,
@@ -43,7 +54,8 @@ class VADHandler {
         redemptionFrames,
         frameSamples,
         minSpeechFrames,
-        submitUserSpeechOnPause);
+        submitUserSpeechOnPause
+    );
   }
 
   void handleEvent(String eventType, String payload) {
@@ -56,7 +68,13 @@ class VADHandler {
           break;
         case 'onSpeechEnd':
           if (eventData.containsKey('audioData')) {
-            _onSpeechEndController.add(eventData['audioData']);
+            // Convert the JSON array back to List<double>
+            final List<double> audioData = (eventData['audioData'] as List)
+                .map((e) => (e as num).toDouble())
+                .toList();
+
+            // Pass raw audio data through
+            _onSpeechEndController.add(audioData);
           } else {
             debugPrint('Invalid VAD Data received: $eventData');
           }
@@ -83,4 +101,3 @@ class VADHandler {
     _onErrorController.close();
   }
 }
-

@@ -1,0 +1,23 @@
+# This is a generated file; do not edit or check into version control.
+audioplayers=/Users/keyurstudent/.pub-cache/hosted/pub.dev/audioplayers-6.1.0/
+audioplayers_android=/Users/keyurstudent/.pub-cache/hosted/pub.dev/audioplayers_android-5.0.0/
+audioplayers_darwin=/Users/keyurstudent/.pub-cache/hosted/pub.dev/audioplayers_darwin-6.0.0/
+audioplayers_linux=/Users/keyurstudent/.pub-cache/hosted/pub.dev/audioplayers_linux-4.0.0/
+audioplayers_web=/Users/keyurstudent/.pub-cache/hosted/pub.dev/audioplayers_web-5.0.1/
+audioplayers_windows=/Users/keyurstudent/.pub-cache/hosted/pub.dev/audioplayers_windows-4.0.0/
+flutter_inappwebview=/Users/keyurstudent/.pub-cache/hosted/pub.dev/flutter_inappwebview-6.1.5/
+flutter_inappwebview_android=/Users/keyurstudent/.pub-cache/hosted/pub.dev/flutter_inappwebview_android-1.1.3/
+flutter_inappwebview_ios=/Users/keyurstudent/.pub-cache/hosted/pub.dev/flutter_inappwebview_ios-1.1.2/
+flutter_inappwebview_macos=/Users/keyurstudent/.pub-cache/hosted/pub.dev/flutter_inappwebview_macos-1.1.2/
+flutter_inappwebview_web=/Users/keyurstudent/.pub-cache/hosted/pub.dev/flutter_inappwebview_web-1.1.2/
+flutter_inappwebview_windows=/Users/keyurstudent/.pub-cache/hosted/pub.dev/flutter_inappwebview_windows-0.6.0/
+path_provider=/Users/keyurstudent/.pub-cache/hosted/pub.dev/path_provider-2.1.4/
+path_provider_android=/Users/keyurstudent/.pub-cache/hosted/pub.dev/path_provider_android-2.2.12/
+path_provider_foundation=/Users/keyurstudent/.pub-cache/hosted/pub.dev/path_provider_foundation-2.4.0/
+path_provider_linux=/Users/keyurstudent/.pub-cache/hosted/pub.dev/path_provider_linux-2.2.1/
+path_provider_windows=/Users/keyurstudent/.pub-cache/hosted/pub.dev/path_provider_windows-2.3.0/
+permission_handler=/Users/keyurstudent/.pub-cache/hosted/pub.dev/permission_handler-11.3.1/
+permission_handler_android=/Users/keyurstudent/.pub-cache/hosted/pub.dev/permission_handler_android-12.0.13/
+permission_handler_apple=/Users/keyurstudent/.pub-cache/hosted/pub.dev/permission_handler_apple-9.4.5/
+permission_handler_html=/Users/keyurstudent/.pub-cache/hosted/pub.dev/permission_handler_html-0.1.3+2/
+permission_handler_windows=/Users/keyurstudent/.pub-cache/hosted/pub.dev/permission_handler_windows-0.2.1/

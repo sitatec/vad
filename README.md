@@ -1,16 +1,16 @@
-# Flutter VAD Package for Web
-Flutter VAD Package is a simple Dart binding for the [VAD JavaScript library](https://github.com/ricky0123/vad) . This package provides access to a Voice Activity Detection (VAD) system, allowing Flutter web applications to start and stop VAD-based listening and handle various VAD events.
+# VAD Package for Flutter Web
+VAD Package is a simple Dart binding for the [VAD JavaScript library](https://github.com/ricky0123/vad) to run it on Flutter web. This package provides access to a Voice Activity Detection (VAD) JavaScript API, allowing Flutter web applications to start and stop VAD-based listening and handle various VAD events.
 ## Getting Started
 
 ### Prerequisites
 
-Ensure that you include the following in your web app’s HTML file to load the VAD library:
+Ensure that you include the following in your web app’s index.html file to load the VAD library:
 
 
 ```html
 <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@ricky0123/vad-web@0.0.19/dist/bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/keyur2maru/vad_dart/dist/vad_dart.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/keyur2maru/vad_dart@master/dist/vad_dart.js"></script>
 ```
 
 ### Installation
@@ -18,7 +18,9 @@ Add this package to your `pubspec.yaml` dependencies:
 
 ```yaml
 dependencies:
-  vad: ^0.0.1
+  vad:
+    git:
+      url: https://github.com/keyur2maru/vad.git
 ```
 
 Then import the package in your Dart file:

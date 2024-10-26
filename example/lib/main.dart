@@ -1,7 +1,10 @@
+// main.dart
+
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:audioplayers/audioplayers.dart';
-import '' if (dart.library.html) 'package:vad/vad.dart';
+import 'package:vad/vad.dart';
+import 'audio_utils.dart';
 
 void main() {
   runApp(const MyApp());
@@ -27,8 +30,13 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
+class Recording {
+  final List<double> samples;
+  Recording(this.samples);
+}
+
 class _MyHomePageState extends State<MyHomePage> {
-  List<String> recordings = [];
+  List<Recording> recordings = [];
   late final VADHandler _vadHandler;
   final AudioPlayer _audioPlayer = AudioPlayer();
   bool isListening = false;
@@ -41,14 +49,13 @@ class _MyHomePageState extends State<MyHomePage> {
     super.initState();
     _vadHandler = VADHandler();
 
-    // Listen for events
     _vadHandler.onSpeechStart.listen((_) {
       debugPrint('Speech detected.');
     });
 
-    _vadHandler.onSpeechEnd.listen((String audioData) {
+    _vadHandler.onSpeechEnd.listen((List<double> samples) {
       setState(() {
-        recordings.add(audioData);
+        recordings.add(Recording(samples));
       });
       debugPrint('Speech ended, recording added.');
     });
@@ -62,9 +69,10 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
-  Future<void> _playRecording(String base64Wav) async {
+  Future<void> _playRecording(Recording recording) async {
     try {
-      String uri = 'data:audio/wav;base64,$base64Wav';
+      // Convert to WAV only when needed for playback
+      String uri = AudioUtils.createWavUrl(recording.samples);
       await _audioPlayer.play(UrlSource(uri));
     } catch (e) {
       debugPrint('Error playing audio: $e');
@@ -78,13 +86,14 @@ class _MyHomePageState extends State<MyHomePage> {
     super.dispose();
   }
 
-  Widget _buildRecordingItem(String audio, int index) {
+  Widget _buildRecordingItem(Recording recording, int index) {
     return ListTile(
       leading: const Icon(Icons.mic),
       title: Text('Recording ${index + 1}'),
+      subtitle: Text('${recording.samples.length} samples (${recording.samples.length ~/ 16000} seconds)'),
       trailing: IconButton(
         icon: const Icon(Icons.play_arrow),
-        onPressed: () => _playRecording(audio),
+        onPressed: () => _playRecording(recording),
       ),
     );
   }
@@ -114,7 +123,11 @@ class _MyHomePageState extends State<MyHomePage> {
                         if (isListening) {
                           stopListening();
                         } else {
-                          _vadHandler.startListening(submitUserSpeechOnPause: submitUserSpeechOnPause, preSpeechPadFrames: preSpeechPadFrames, redemptionFrames: redemptionFrames);
+                          _vadHandler.startListening(
+                              submitUserSpeechOnPause: submitUserSpeechOnPause,
+                              preSpeechPadFrames: preSpeechPadFrames,
+                              redemptionFrames: redemptionFrames
+                          );
                         }
                         isListening = !isListening;
                       });
