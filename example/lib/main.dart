@@ -2,11 +2,14 @@
 
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:audioplayers/audioplayers.dart';
+import 'package:audioplayers/audioplayers.dart' as audioplayers;
 import 'package:vad/vad.dart';
 import 'audio_utils.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+
   runApp(const MyApp());
 }
 
@@ -37,8 +40,8 @@ class Recording {
 
 class _MyHomePageState extends State<MyHomePage> {
   List<Recording> recordings = [];
-  late final VADHandler _vadHandler;
-  final AudioPlayer _audioPlayer = AudioPlayer();
+  final audioplayers.AudioPlayer _audioPlayer = audioplayers.AudioPlayer();
+  final _vadHandler = VadHandler.create(isDebug: true);
   bool isListening = false;
   int preSpeechPadFrames = 10;
   int redemptionFrames = 8;
@@ -47,7 +50,6 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
-    _vadHandler = VADHandler();
 
     _vadHandler.onSpeechStart.listen((_) {
       debugPrint('Speech detected.');
@@ -73,7 +75,7 @@ class _MyHomePageState extends State<MyHomePage> {
     try {
       // Convert to WAV only when needed for playback
       String uri = AudioUtils.createWavUrl(recording.samples);
-      await _audioPlayer.play(UrlSource(uri));
+      await _audioPlayer.play(audioplayers.UrlSource(uri));
     } catch (e) {
       debugPrint('Error playing audio: $e');
     }
@@ -119,9 +121,10 @@ class _MyHomePageState extends State<MyHomePage> {
                 children: [
                   ElevatedButton(
                     onPressed: () async {
+                      await _audioPlayer.setAudioContext(audioplayers.AudioContext(iOS: audioplayers.AudioContextIOS(options: const {audioplayers.AVAudioSessionOptions.mixWithOthers})));
                       setState(() {
                         if (isListening) {
-                          stopListening();
+                          _vadHandler.stopListening();
                         } else {
                           _vadHandler.startListening(
                               submitUserSpeechOnPause: submitUserSpeechOnPause,
@@ -139,7 +142,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     onPressed: () async {
                       final status = await Permission.microphone.request();
                       debugPrint("Microphone permission status: $status");
-                      logMessage("Microphone permission status: $status");
+                      //logMessage("Microphone permission status: $status");
                     },
                     child: const Text("Request Microphone Permission"),
                   ),

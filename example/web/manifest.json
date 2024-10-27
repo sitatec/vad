@@ -1,6 +1,6 @@
 {
-    "name": "vad_js_flutter",
-    "short_name": "vad_js_flutter",
+    "name": "vad_example",
+    "short_name": "vad_example",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
