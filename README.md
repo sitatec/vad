@@ -426,7 +426,7 @@ Special thanks to [Ricky0123](https://github.com/ricky0123) for creating the [VA
 
 
 ## License
-This project is licensed under the [MIT License](https://opensource.org/license/mit) . See the [LICENSE](https://github.com/keyur2maru/vad/blob/main/LICENSE)  file for details.
+This project is licensed under the [MIT License](https://opensource.org/license/mit) . See the [LICENSE](https://github.com/keyur2maru/vad/blob/master/LICENSE)  file for details.
 
 ---
 
