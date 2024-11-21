@@ -157,4 +157,4 @@ class VadHandlerWeb implements VadHandlerBase {
   }
 }
 
-VadHandlerBase createVadHandler({required isDebug}) => VadHandlerWeb(isDebug: isDebug);
+VadHandlerBase createVadHandler({required isDebug, modelPath}) => VadHandlerWeb(isDebug: isDebug);

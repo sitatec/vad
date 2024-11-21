@@ -1,7 +1,6 @@
 name: vad
-description: "VAD is a cross-platform Dart binding for the VAD JavaScript library.
-  This package provides access to a Voice Activity Detection (VAD) system, allowing Flutter applications to start and stop VAD-based listening and handle various VAD events."
-version: 0.0.2
+description: "VAD is a cross-platform Voice Activity Detection system, allowing Flutter applications to seamlessly handle various VAD events."
+version: 0.0.3
 repository: https://github.com/keyur2maru/vad
 
 environment:
@@ -11,12 +10,18 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_inappwebview: ^6.1.5
+  onnxruntime: ^1.4.1
+  permission_handler: ^11.3.1
+  record: ^5.2.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+
+flutter:
+  assets:
+    - packages/vad/assets/models/silero_vad.onnx
 
 topics:
   - vad

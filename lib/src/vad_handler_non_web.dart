@@ -1,18 +1,25 @@
 // vad_handler_non_web.dart
 
+import 'package:flutter/cupertino.dart';
+import 'package:record/record.dart';
+import 'package:vad/src/vad_handler_base.dart';
 import 'dart:async';
-import 'dart:convert';
-import 'package:flutter/foundation.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'vad_handler_base.dart';
+import 'vad_event.dart';
+import 'vad_iterator.dart';
 
 class VadHandlerNonWeb implements VadHandlerBase {
-  HeadlessInAppWebView? _headlessWebView;
+  final AudioRecorder _audioRecorder = AudioRecorder();
+  late VadIterator _vadIterator;
+  StreamSubscription<List<int>>? _audioStreamSubscription;
+  String modelPath;
+  bool isDebug = false;
+  bool _isInitialized = false;
+  static const int sampleRate = 16000;
+
   final _onSpeechEndController = StreamController<List<double>>.broadcast();
   final _onSpeechStartController = StreamController<void>.broadcast();
   final _onVADMisfireController = StreamController<void>.broadcast();
   final _onErrorController = StreamController<String>.broadcast();
-  bool _isInitialized = false;
 
   @override
   Stream<List<double>> get onSpeechEnd => _onSpeechEndController.stream;
@@ -26,156 +33,41 @@ class VadHandlerNonWeb implements VadHandlerBase {
   @override
   Stream<String> get onError => _onErrorController.stream;
 
-  bool isDebug = false;
+  VadHandlerNonWeb({required this.isDebug, this.modelPath = 'packages/vad/assets/models/silero_vad.onnx'});
 
-  VadHandlerNonWeb({required bool isDebug}) {
-    _initialize(isDebug);
+  Future<void> initializeVAD() async {
+    if (isDebug) debugPrint('VadHandlerNonWeb: Initializing VAD');
+    await _vadIterator.initModel(modelPath);
+    _vadIterator.setVadEventCallback(_handleVadEvent);
+    _isInitialized = true;
   }
 
-  Future<void> _initialize([bool isDebug = false]) async {
-    if (_isInitialized) return;
-    if (isDebug) {
-      PlatformInAppWebViewController.debugLoggingSettings.enabled = true;
-      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-        await InAppWebViewController.setWebContentsDebuggingEnabled(true);
-      }
-    } else {
-      PlatformInAppWebViewController.debugLoggingSettings.enabled = false;
-    }
-    isDebug = isDebug;
-
-    final completer = Completer<void>();
-
-    _headlessWebView = HeadlessInAppWebView(
-      initialData: InAppWebViewInitialData(
-        data: '',
-        mimeType: 'text/html',
-        encoding: 'utf-8',
-        baseUrl: WebUri('https://example.com'),
-      ),
-      onLoadStart: (controller, url) {
-        if (isDebug) debugPrint('VadHandlerNonWeb: VAD Webview loading: $url');
-      },
-      onLoadStop: (controller, url) async {
-        if (isDebug) debugPrint('VadHandlerNonWeb: VAD Webview loaded');
-      },
-      onPermissionRequest: (controller, request) async {
-        if (isDebug) debugPrint('VadHandlerNonWeb: VAD Permission Request: $request');
-        return PermissionResponse(resources: request.resources,
-            action: PermissionResponseAction.GRANT);
-      },
-      initialSettings: InAppWebViewSettings(
-        mediaPlaybackRequiresUserGesture: false,
-        javaScriptEnabled: true,
-        isInspectable: kDebugMode,
-        allowsInlineMediaPlayback: true,
-        allowBackgroundAudioPlaying: true,
-      ),
-      onMicrophoneCaptureStateChanged: (controller, state, _) {
-        if (state == MediaCaptureState.ACTIVE) {
-          if (isDebug) debugPrint('VadHandlerNonWeb: Microphone is no longer recording, starting recording again');
-          _headlessWebView?.webViewController?.setMicrophoneCaptureState(state: MediaCaptureState.ACTIVE);
+  void _handleVadEvent(VadEvent event) {
+    if (isDebug) debugPrint('VadHandlerNonWeb: VAD Event: ${event.type} with message ${event.message}');
+    switch (event.type) {
+      case VadEventType.start:
+        _onSpeechStartController.add(null);
+        break;
+      case VadEventType.end:
+        if (event.audioData != null) {
+          final int16List = event.audioData!.buffer.asInt16List();
+          final floatSamples = int16List.map((e) => e / 32768.0).toList();
+          _onSpeechEndController.add(floatSamples);
         }
-        return Future.value();
-      },
-      onWebViewCreated: (controller) async {
-        await controller.loadUrl(urlRequest: URLRequest(url: WebUri('https://keyur2maru.github.io/vad_dart/dist/vad_non_web')));
-        controller.addJavaScriptHandler(
-          handlerName: 'onVadInitialized',
-          callback: (args) {
-            if (isDebug) debugPrint('VadHandlerNonWeb: VAD Initialized');
-              _isInitialized = true;
-            completer.complete();
-          },
-        );
-        controller.addJavaScriptHandler(
-          handlerName: 'handleEvent',
-          callback: (args) {
-            if (args.length >= 2) {
-              final eventType = args[0] as String;
-              final payload = args[1] as String;
-              _handleEvent(eventType, payload);
-            }
-          },
-        );
-
-        controller.addJavaScriptHandler(
-          handlerName: 'logMessage',
-          callback: (args) {
-            if (args.isNotEmpty) {
-              debugPrint('VadHandlerNonWeb: VAD Log: ${args.first}');
-            }
-          },
-        );
-      },
-      onReceivedError: (controller, request, error) {
-        debugPrint('VadHandlerNonWeb: VAD Error: ${error.description}');
-      },
-      onConsoleMessage: (controller, consoleMessage) {
-        debugPrint('VadHandlerNonWeb: VAD Console: ${consoleMessage.message}');
-      },
-    );
-
-    await _headlessWebView?.run();
-
-    try {
-      await completer.future.timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          throw TimeoutException('VadHandlerNonWeb: VAD initialization timed out');
-        },
-      );
-      if (isDebug) debugPrint('VadHandlerNonWeb: VAD initialized successfully');
-    } catch (e) {
-      _onErrorController.add(e.toString());
-      debugPrint('VadHandlerNonWeb: VAD initialization failed: $e');
-    }
-  }
-
-  void _handleEvent(String eventType, String payload) {
-    try {
-      Map<String, dynamic> eventData =
-      payload.isNotEmpty ? json.decode(payload) : {};
-
-      switch (eventType) {
-        case 'onError':
-          if (eventData.containsKey('error')) {
-            if (isDebug) debugPrint('VadHandlerNonWeb: _handleEvent: VAD Error: ${eventData['error']}');
-            _onErrorController.add(eventData['error'].toString());
-          } else {
-            _onErrorController.add(payload);
-          }
-          break;
-        case 'onSpeechEnd':
-          if (eventData.containsKey('audioData')) {
-            final List<double> audioData = (eventData['audioData'] as List)
-                .map((e) => (e as num).toDouble())
-                .toList();
-            _onSpeechEndController.add(audioData);
-            if (isDebug) debugPrint('VadHandlerNonWeb: _handleEvent: VAD Speech End: first 5 samples: ${audioData.sublist(0, 5)}');
-          } else {
-            debugPrint('VadHandlerNonWeb: _handleEvent: Invalid VAD Data received: $eventData');
-          }
-          break;
-        case 'onSpeechStart':
-          if (isDebug) debugPrint('VadHandlerNonWeb: _handleEvent: VAD Speech Start');
-          _onSpeechStartController.add(null);
-          break;
-        case 'onVADMisfire':
-          if (isDebug) debugPrint('VadHandlerNonWeb: _handleEvent: VAD Misfire');
-          _onVADMisfireController.add(null);
-          break;
-        default:
-          debugPrint("Unknown event: $eventType");
-      }
-    } catch (e, st) {
-      debugPrint('Error handling event: $e');
-      debugPrint('Stack Trace: $st');
+        break;
+      case VadEventType.misfire:
+        _onVADMisfireController.add(null);
+        break;
+      case VadEventType.error:
+        _onErrorController.add(event.message);
+        break;
+      default:
+        break;
     }
   }
 
   @override
-  void startListening({
+  Future<void> startListening({
     double positiveSpeechThreshold = 0.5,
     double negativeSpeechThreshold = 0.35,
     int preSpeechPadFrames = 1,
@@ -185,46 +77,68 @@ class VadHandlerNonWeb implements VadHandlerBase {
     bool submitUserSpeechOnPause = false
   }) async {
     if (!_isInitialized) {
-      if (isDebug) debugPrint('VadHandlerNonWeb: startListening: VAD not initialized, initializing now');
-      await _initialize();
+      _vadIterator = VadIterator(
+          isDebug: isDebug,
+          sampleRate: sampleRate,
+          frameSamples: frameSamples,
+          positiveSpeechThreshold: positiveSpeechThreshold,
+          negativeSpeechThreshold: negativeSpeechThreshold,
+          redemptionFrames: redemptionFrames,
+          preSpeechPadFrames: preSpeechPadFrames,
+          minSpeechFrames: minSpeechFrames,
+          submitUserSpeechOnPause: submitUserSpeechOnPause
+      );
+      await initializeVAD();
     }
 
-    await _headlessWebView?.webViewController?.evaluateJavascript(
-      source: '''
-        startListeningImpl(
-          $positiveSpeechThreshold,
-          $negativeSpeechThreshold,
-          $preSpeechPadFrames,
-          $redemptionFrames,
-          $frameSamples,
-          $minSpeechFrames,
-          $submitUserSpeechOnPause
-        )
-      ''',
-    );
-    debugPrint('VadHandlerNonWeb: startListening: VAD started');
-  }
-
-  @override
-  void stopListening() async {
-    if (!_isInitialized) {
-      if (isDebug) debugPrint('VadHandlerNonWeb: stopListening: VAD not initialized');
-      _onErrorController.add('VAD not initialized');
+    bool hasPermission = await _audioRecorder.hasPermission();
+    if (!hasPermission) {
+      _onErrorController.add('VadHandlerNonWeb: No permission to record audio.');
+      if (isDebug) debugPrint('VadHandlerNonWeb: No permission to record audio.');
       return;
     }
 
-    await _headlessWebView?.webViewController?.evaluateJavascript(
-      source: 'stopListening()',
-    );
-    if (isDebug) debugPrint('VadHandlerNonWeb: stopListening: VAD stopped');
+    // Start recording with a stream
+    final stream = await _audioRecorder.startStream(RecordConfig(
+        encoder: AudioEncoder.pcm16bits,
+        sampleRate: _vadIterator.sampleRate,
+        bitRate: 16,
+        numChannels: 1,
+        echoCancel: true,
+        autoGain: true,
+        noiseSuppress: true
+    ));
+
+    _audioStreamSubscription = stream.listen((data) async {
+      await _vadIterator.processAudioData(data);
+    });
   }
 
   @override
+  Future<void> stopListening() async {
+    if (isDebug) debugPrint('stopListening');
+    try {
+      // Before stopping the audio stream, handle forced speech end if needed
+      if (_vadIterator.submitUserSpeechOnPause) {
+        _vadIterator.forceEndSpeech();
+      }
+
+      await _audioStreamSubscription?.cancel();
+      _audioStreamSubscription = null;
+      await _audioRecorder.stop();
+      _vadIterator.reset();
+    } catch (e) {
+      _onErrorController.add(e.toString());
+      if (isDebug) debugPrint('Error stopping audio stream: $e');
+    }
+  }
+
+
+  @override
   void dispose() {
-    if (isDebug) debugPrint('VadHandlerNonWeb: Disposing VAD');
+    if (isDebug) debugPrint('VadHandlerNonWeb: dispose');
     stopListening();
-    _isInitialized = false;
-    _headlessWebView?.dispose();
+    _vadIterator.release();
     _onSpeechEndController.close();
     _onSpeechStartController.close();
     _onVADMisfireController.close();
@@ -232,4 +146,4 @@ class VadHandlerNonWeb implements VadHandlerBase {
   }
 }
 
-VadHandlerBase createVadHandler({required isDebug}) => VadHandlerNonWeb(isDebug: isDebug);
+VadHandlerBase createVadHandler({required isDebug, modelPath}) => VadHandlerNonWeb(isDebug: isDebug, modelPath: modelPath);
