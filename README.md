@@ -1,6 +1,7 @@
-# VAD Package for Flutter
-VAD Package is a versatile Dart binding for the [VAD JavaScript library](https://github.com/ricky0123/vad) , enabling Voice Activity Detection (VAD) in Flutter applications across **iOS** , **Android** , and **Web**  platforms. This package allows Flutter applications to start and stop VAD-based listening and handle various VAD events seamlessly on multiple platforms.
-Under the hood, the VAD Package uses `dart:js_interop` for Web and `flutter_inappwebview` in headless mode to run the VAD JavaScript library. The package provides a simple API to start and stop VAD listening, configure VAD parameters, and handle VAD events such as speech start, speech end, errors, and misfires.
+# VAD
+VAD is a Flutter library for Voice Activity Detection (VAD) across **iOS** , **Android** , and **Web**  platforms. This package allows applications to start and stop VAD-based listening and handle various VAD events seamlessly.
+Under the hood, the VAD Package uses `dart:js_interop` for Web to run [VAD JavaScript library](https://github.com/ricky0123/vad) and 'package:onnxruntime' for iOS and Android using a custom API with full-feature parity with the JavaScript library.
+The package provides a simple API to start and stop VAD listening, configure VAD parameters, and handle VAD events such as speech start, speech end, errors, and misfires.
 
 ## Table of Contents
 - [Live Demo](#live-demo)
@@ -133,7 +134,7 @@ Note: `audioplayers` is used for audio playback in the example below. You can re
 dependencies:
   flutter:
     sdk: flutter
-  vad: ^0.0.1
+  vad: ^0.0.3
   permission_handler: ^11.3.1
   audioplayers: ^6.1.0
 ```
@@ -146,11 +147,12 @@ Below is a comprehensive example demonstrating how to integrate and use the VAD 
 
 
 ```dart
+// main.dart
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:audioplayers/audioplayers.dart' as audioplayers;
 import 'package:vad/vad.dart';
-import 'audio_utils.dart'; // Ensure this utility exists in your project, you can find the implementation in the example app.
+import 'audio_utils.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -164,127 +166,350 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'VAD Example',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
+      theme: ThemeData.dark().copyWith(
+        primaryColor: Colors.blue,
+        scaffoldBackgroundColor: const Color(0xFF121212),
+        cardColor: const Color(0xFF1E1E1E),
+        sliderTheme: SliderThemeData(
+          activeTrackColor: Colors.blue[400],
+          inactiveTrackColor: Colors.grey[800],
+          thumbColor: Colors.blue[300],
+          overlayColor: Colors.blue.withAlpha(32),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blue[700],
+            foregroundColor: Colors.white,
+          ),
+        ),
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(
+            foregroundColor: Colors.blue[300],
+          ),
+        ),
       ),
-      home: const MyHomePage(title: 'VAD Example Home Page'),
+      home: const MyHomePage(),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  final String title;
+  const MyHomePage({super.key});
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class Recording {
-  final List<double> samples;
+enum RecordingType {
+  speech,
+  misfire,
+}
 
-  Recording(this.samples);
+class Recording {
+  final List<double>? samples;
+  final RecordingType type;
+  final DateTime timestamp;
+
+  Recording({
+    this.samples,
+    required this.type,
+    DateTime? timestamp,
+  }) : timestamp = timestamp ?? DateTime.now();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
   List<Recording> recordings = [];
   final audioplayers.AudioPlayer _audioPlayer = audioplayers.AudioPlayer();
-  final VadHandler _vadHandler = VadHandler.create(isDebug: true);
+  final _vadHandler = VadHandler.create(isDebug: true, modelPath: 'packages/vad/assets/models/silero_vad.onnx');
   bool isListening = false;
+  int frameSamples = 1536; // 1 frame = 1536 samples = 96ms
+  int minSpeechFrames = 3;
   int preSpeechPadFrames = 10;
   int redemptionFrames = 8;
+  bool submitUserSpeechOnPause = false;
+
+  // Audio player state
+  Duration _duration = Duration.zero;
+  Duration _position = Duration.zero;
+  bool _isPlaying = false;
+  int? _currentlyPlayingIndex;
 
   @override
   void initState() {
     super.initState();
+    _initializeAudioPlayer();
+    _setupAudioPlayerListeners();
+    _setupVadHandler();
+  }
 
+  void _setupAudioPlayerListeners() {
+    _audioPlayer.onDurationChanged.listen((Duration duration) {
+      setState(() => _duration = duration);
+    });
+
+    _audioPlayer.onPositionChanged.listen((Duration position) {
+      setState(() => _position = position);
+    });
+
+    _audioPlayer.onPlayerComplete.listen((_) {
+      setState(() {
+        _isPlaying = false;
+        _position = Duration.zero;
+        _currentlyPlayingIndex = null;
+      });
+    });
+
+    _audioPlayer.onPlayerStateChanged.listen((state) {
+      setState(() {
+        _isPlaying = state == audioplayers.PlayerState.playing;
+      });
+    });
+  }
+
+  void _setupVadHandler() {
     _vadHandler.onSpeechStart.listen((_) {
       debugPrint('Speech detected.');
     });
 
-    _vadHandler.onSpeechEnd.listen((audioData) {
-      debugPrint('Speech ended with audio data: ${audioData.length} samples.');
-      recordings.add(Recording(audioData));
-    });
-
-    _vadHandler.onError.listen((error) {
-      debugPrint('VAD Error: $error');
+    _vadHandler.onSpeechEnd.listen((List<double> samples) {
+      setState(() {
+        recordings.add(Recording(
+          samples: samples,
+          type: RecordingType.speech,
+        ));
+      });
+      debugPrint('Speech ended, recording added.');
     });
 
     _vadHandler.onVADMisfire.listen((_) {
-      debugPrint('VAD Misfire detected.');
+      setState(() {
+        recordings.add(Recording(type: RecordingType.misfire));
+      });
+      debugPrint('VAD misfire detected.');
+    });
+
+    _vadHandler.onError.listen((String message) {
+      debugPrint('Error: $message');
+    });
+  }
+
+  Future<void> _initializeAudioPlayer() async {
+    await _audioPlayer.setAudioContext(
+      audioplayers.AudioContext(
+        iOS: audioplayers.AudioContextIOS(
+          options: const {audioplayers.AVAudioSessionOptions.mixWithOthers},
+        ),
+      ),
+    );
+  }
+
+  Future<void> _playRecording(Recording recording, int index) async {
+    if (recording.type == RecordingType.misfire) return;
+
+    try {
+      if (_currentlyPlayingIndex == index && _isPlaying) {
+        await _audioPlayer.pause();
+        setState(() {
+          _isPlaying = false;
+        });
+      } else {
+        if (_currentlyPlayingIndex != index) {
+          String uri = AudioUtils.createWavUrl(recording.samples!);
+          await _audioPlayer.play(audioplayers.UrlSource(uri));
+          setState(() {
+            _currentlyPlayingIndex = index;
+            _isPlaying = true;
+          });
+        } else {
+          await _audioPlayer.resume();
+          setState(() {
+            _isPlaying = true;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error playing audio: $e');
+    }
+  }
+
+  Future<void> _seekTo(Duration position) async {
+    await _audioPlayer.seek(position);
+    setState(() {
+      _position = position;
     });
   }
 
   @override
   void dispose() {
-    _vadHandler.dispose();
     _audioPlayer.dispose();
+    _vadHandler.dispose();
     super.dispose();
   }
 
-  Future<void> _playRecording(Recording recording) async {
-    try {
-      String uri = AudioUtils.createWavUrl(recording.samples);
-      await _audioPlayer.play(audioplayers.UrlSource(uri));
-    } catch (e) {
-      debugPrint('Error playing audio: $e');
-    }
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final minutes = twoDigits(duration.inMinutes.remainder(60));
+    final seconds = twoDigits(duration.inSeconds.remainder(60));
+    return "$minutes:$seconds";
+  }
+
+  String _formatTimestamp(DateTime timestamp) {
+    return '${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}:${timestamp.second.toString().padLeft(2, '0')}';
+  }
+
+  Widget _buildRecordingItem(Recording recording, int index) {
+    final bool isCurrentlyPlaying = _currentlyPlayingIndex == index;
+    final bool isMisfire = recording.type == RecordingType.misfire;
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+      child: Column(
+        children: [
+          ListTile(
+            leading: isMisfire
+                    ? const CircleAvatar(
+              backgroundColor: Colors.red,
+              child: Icon(Icons.warning_amber_rounded, color: Colors.white),
+            )
+                    : CircleAvatar(
+              backgroundColor: Colors.blue[900],
+              child: Icon(
+                isCurrentlyPlaying && _isPlaying ? Icons.pause : Icons.play_arrow,
+                color: Colors.blue[100],
+              ),
+            ),
+            title: Text(
+              isMisfire ? 'Misfire Event' : 'Recording ${index + 1}',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: isMisfire ? Colors.red[300] : null,
+              ),
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(_formatTimestamp(recording.timestamp)),
+                if (!isMisfire) Text(
+                  '${(recording.samples!.length / 16000).toStringAsFixed(1)} seconds',
+                  style: TextStyle(color: Colors.grey[400]),
+                ),
+              ],
+            ),
+            onTap: isMisfire ? null : () => _playRecording(recording, index),
+          ),
+          if (isCurrentlyPlaying && !isMisfire) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Column(
+                children: [
+                  SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                      overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
+                      trackHeight: 4,
+                    ),
+                    child: Slider(
+                      value: _position.inMilliseconds.toDouble(),
+                      min: 0,
+                      max: _duration.inMilliseconds.toDouble(),
+                      onChanged: (value) {
+                        _seekTo(Duration(milliseconds: value.toInt()));
+                      },
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(_formatDuration(_position)),
+                        Text(_formatDuration(_duration)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.title),
+        title: const Text("VAD Example"),
+        backgroundColor: Colors.black,
+        elevation: 0,
       ),
-      // UI Elements
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            ElevatedButton(
-              onPressed: () async {
-                await _audioPlayer.setAudioContext(audioplayers.AudioContext(
-                  iOS: audioplayers.AudioContextIOS(
-                    options: {audioplayers.AVAudioSessionOptions.mixWithOthers},
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              itemCount: recordings.length,
+              itemBuilder: (context, index) {
+                return _buildRecordingItem(recordings[index], index);
+              },
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.all(16.0),
+            decoration: BoxDecoration(
+              color: Colors.black,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  spreadRadius: 1,
+                  blurRadius: 10,
+                  offset: const Offset(0, -1),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    setState(() {
+                      if (isListening) {
+                        _vadHandler.stopListening();
+                      } else {
+                        _vadHandler.startListening(
+                          frameSamples: frameSamples,
+                          submitUserSpeechOnPause: submitUserSpeechOnPause,
+                          preSpeechPadFrames: preSpeechPadFrames,
+                          redemptionFrames: redemptionFrames,
+                        );
+                      }
+                      isListening = !isListening;
+                    });
+                  },
+                  icon: Icon(isListening ? Icons.stop : Icons.mic),
+                  label: Text(isListening ? "Stop Listening" : "Start Listening"),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 48),
                   ),
-                ));
-                setState(() {
-                  if (isListening) {
-                    _vadHandler.stopListening();
-                  } else {
-                    _vadHandler.startListening(
-                      submitUserSpeechOnPause: true,
-                    );
-                  }
-                  isListening = !isListening;
-                });
-              },
-              child: Text(isListening ? 'Stop Listening' : 'Start Listening'),
+                ),
+                const SizedBox(height: 8),
+                TextButton.icon(
+                  onPressed: () async {
+                    final status = await Permission.microphone.request();
+                    debugPrint("Microphone permission status: $status");
+                  },
+                  icon: const Icon(Icons.settings_voice),
+                  label: const Text("Request Microphone Permission"),
+                  style: TextButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 48),
+                  ),
+                ),
+              ],
             ),
-            ElevatedButton(
-              onPressed: () async {
-                final status = await Permission.microphone.request();
-                debugPrint("Microphone permission status: $status");
-                // Optionally handle the permission status
-              },
-              child: const Text("Request Microphone Permission"),
-            ),
-            Expanded(
-              child: ListView.builder(
-                itemCount: recordings.length,
-                itemBuilder: (context, index) {
-                  return ListTile(
-                    title: Text('Recording ${index + 1}'),
-                    onTap: () => _playRecording(recordings[index]),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -319,6 +544,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
 #### - **`startListening`**
   Starts the VAD with configurable parameters.
+  Sample Rate: 16kHz
+  1 Frame = 1536 samples = 96ms
 
 
 ```dart
@@ -422,7 +649,7 @@ The VAD Package has been tested on the following platforms:
 Contributions are welcome! Please feel free to submit a pull request or open an issue if you encounter any problems or have suggestions for improvements.
 
 ## Acknowledgements
-Special thanks to [Ricky0123](https://github.com/ricky0123) for creating the [VAD JavaScript library](https://github.com/ricky0123/vad) that powers the VAD Package and Silero Team for the [VAD model](https://github.com/snakers4/silero-vad) used in the library.
+Special thanks to [Ricky0123](https://github.com/ricky0123) for creating the [VAD JavaScript library](https://github.com/ricky0123/vad), [gtbluesky](https://github.com/gtbluesky) for building the [onnxruntime package](https://github.com/gtbluesky/onnxruntime_flutter) and Silero Team for the [VAD model](https://github.com/snakers4/silero-vad) used in the library.
 
 
 ## License
