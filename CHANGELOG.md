@@ -1,3 +1,9 @@
+## 0.0.4
+
+* Fixed a bug where default `modelPath` was not picked up, resulting in silent failure if `modelPath` was not provided.
+* Export `VadIterator` class for manual control over the VAD process for non-streaming use cases. Only available on iOS/Android.
+* Added comments for all public methods and classes.
+
 ## 0.0.3
 
 * Switch to `onnxruntime` package for inference on a separate isolate on iOS and Android to avoid using a full browser in the background, overall reducing the app size and improving performance.

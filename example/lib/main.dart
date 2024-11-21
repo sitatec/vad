@@ -72,7 +72,8 @@ class Recording {
 class _MyHomePageState extends State<MyHomePage> {
   List<Recording> recordings = [];
   final audioplayers.AudioPlayer _audioPlayer = audioplayers.AudioPlayer();
-  final _vadHandler = VadHandler.create(isDebug: true, modelPath: 'packages/vad/assets/models/silero_vad.onnx');
+  final _vadHandler = VadHandler.create(
+      isDebug: true);
   bool isListening = false;
   int frameSamples = 1536; // 1 frame = 1536 samples = 96ms
   int minSpeechFrames = 3;
@@ -220,16 +221,19 @@ class _MyHomePageState extends State<MyHomePage> {
           ListTile(
             leading: isMisfire
                 ? const CircleAvatar(
-              backgroundColor: Colors.red,
-              child: Icon(Icons.warning_amber_rounded, color: Colors.white),
-            )
+                    backgroundColor: Colors.red,
+                    child:
+                        Icon(Icons.warning_amber_rounded, color: Colors.white),
+                  )
                 : CircleAvatar(
-              backgroundColor: Colors.blue[900],
-              child: Icon(
-                isCurrentlyPlaying && _isPlaying ? Icons.pause : Icons.play_arrow,
-                color: Colors.blue[100],
-              ),
-            ),
+                    backgroundColor: Colors.blue[900],
+                    child: Icon(
+                      isCurrentlyPlaying && _isPlaying
+                          ? Icons.pause
+                          : Icons.play_arrow,
+                      color: Colors.blue[100],
+                    ),
+                  ),
             title: Text(
               isMisfire ? 'Misfire Event' : 'Recording ${index + 1}',
               style: TextStyle(
@@ -241,10 +245,11 @@ class _MyHomePageState extends State<MyHomePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(_formatTimestamp(recording.timestamp)),
-                if (!isMisfire) Text(
-                  '${(recording.samples!.length / 16000).toStringAsFixed(1)} seconds',
-                  style: TextStyle(color: Colors.grey[400]),
-                ),
+                if (!isMisfire)
+                  Text(
+                    '${(recording.samples!.length / 16000).toStringAsFixed(1)} seconds',
+                    style: TextStyle(color: Colors.grey[400]),
+                  ),
               ],
             ),
             onTap: isMisfire ? null : () => _playRecording(recording, index),
@@ -256,8 +261,10 @@ class _MyHomePageState extends State<MyHomePage> {
                 children: [
                   SliderTheme(
                     data: SliderTheme.of(context).copyWith(
-                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                      overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
+                      thumbShape:
+                          const RoundSliderThumbShape(enabledThumbRadius: 6),
+                      overlayShape:
+                          const RoundSliderOverlayShape(overlayRadius: 14),
                       trackHeight: 4,
                     ),
                     child: Slider(
@@ -341,7 +348,8 @@ class _MyHomePageState extends State<MyHomePage> {
                     });
                   },
                   icon: Icon(isListening ? Icons.stop : Icons.mic),
-                  label: Text(isListening ? "Stop Listening" : "Start Listening"),
+                  label:
+                      Text(isListening ? "Stop Listening" : "Start Listening"),
                   style: ElevatedButton.styleFrom(
                     minimumSize: const Size(double.infinity, 48),
                   ),

@@ -3,17 +3,26 @@
 import 'package:flutter/cupertino.dart';
 import 'package:record/record.dart';
 import 'package:vad/src/vad_handler_base.dart';
+import 'package:vad/src/vad_iterator.dart';
 import 'dart:async';
 import 'vad_event.dart';
-import 'vad_iterator.dart';
+import 'vad_iterator_base.dart';
 
+/// VadHandlerNonWeb class
 class VadHandlerNonWeb implements VadHandlerBase {
   final AudioRecorder _audioRecorder = AudioRecorder();
-  late VadIterator _vadIterator;
+  late VadIteratorBase _vadIterator;
   StreamSubscription<List<int>>? _audioStreamSubscription;
+
+  /// Path to the model file
   String modelPath;
+
+  /// Debug flag
   bool isDebug = false;
   bool _isInitialized = false;
+  bool _submitUserSpeechOnPause = false;
+
+  /// Sample rate
   static const int sampleRate = 16000;
 
   final _onSpeechEndController = StreamController<List<double>>.broadcast();
@@ -33,17 +42,17 @@ class VadHandlerNonWeb implements VadHandlerBase {
   @override
   Stream<String> get onError => _onErrorController.stream;
 
-  VadHandlerNonWeb({required this.isDebug, this.modelPath = 'packages/vad/assets/models/silero_vad.onnx'});
+  /// Constructor
+  VadHandlerNonWeb(
+      {required this.isDebug,
+      this.modelPath = 'packages/vad/assets/models/silero_vad.onnx'});
 
-  Future<void> initializeVAD() async {
-    if (isDebug) debugPrint('VadHandlerNonWeb: Initializing VAD');
-    await _vadIterator.initModel(modelPath);
-    _vadIterator.setVadEventCallback(_handleVadEvent);
-    _isInitialized = true;
-  }
-
+  /// Handle VAD event
   void _handleVadEvent(VadEvent event) {
-    if (isDebug) debugPrint('VadHandlerNonWeb: VAD Event: ${event.type} with message ${event.message}');
+    if (isDebug) {
+      debugPrint(
+          'VadHandlerNonWeb: VAD Event: ${event.type} with message ${event.message}');
+    }
     switch (event.type) {
       case VadEventType.start:
         _onSpeechStartController.add(null);
@@ -67,17 +76,16 @@ class VadHandlerNonWeb implements VadHandlerBase {
   }
 
   @override
-  Future<void> startListening({
-    double positiveSpeechThreshold = 0.5,
-    double negativeSpeechThreshold = 0.35,
-    int preSpeechPadFrames = 1,
-    int redemptionFrames = 8,
-    int frameSamples = 1536,
-    int minSpeechFrames = 3,
-    bool submitUserSpeechOnPause = false
-  }) async {
+  Future<void> startListening(
+      {double positiveSpeechThreshold = 0.5,
+      double negativeSpeechThreshold = 0.35,
+      int preSpeechPadFrames = 1,
+      int redemptionFrames = 8,
+      int frameSamples = 1536,
+      int minSpeechFrames = 3,
+      bool submitUserSpeechOnPause = false}) async {
     if (!_isInitialized) {
-      _vadIterator = VadIterator(
+      _vadIterator = VadIterator.create(
           isDebug: isDebug,
           sampleRate: sampleRate,
           frameSamples: frameSamples,
@@ -88,26 +96,31 @@ class VadHandlerNonWeb implements VadHandlerBase {
           minSpeechFrames: minSpeechFrames,
           submitUserSpeechOnPause: submitUserSpeechOnPause
       );
-      await initializeVAD();
+      await _vadIterator.initModel(modelPath);
+      _vadIterator.setVadEventCallback(_handleVadEvent);
+      _submitUserSpeechOnPause = submitUserSpeechOnPause;
+      _isInitialized = true;
     }
 
     bool hasPermission = await _audioRecorder.hasPermission();
     if (!hasPermission) {
-      _onErrorController.add('VadHandlerNonWeb: No permission to record audio.');
-      if (isDebug) debugPrint('VadHandlerNonWeb: No permission to record audio.');
+      _onErrorController
+          .add('VadHandlerNonWeb: No permission to record audio.');
+      if (isDebug) {
+        debugPrint('VadHandlerNonWeb: No permission to record audio.');
+      }
       return;
     }
 
     // Start recording with a stream
-    final stream = await _audioRecorder.startStream(RecordConfig(
+    final stream = await _audioRecorder.startStream(const RecordConfig(
         encoder: AudioEncoder.pcm16bits,
-        sampleRate: _vadIterator.sampleRate,
+        sampleRate: sampleRate,
         bitRate: 16,
         numChannels: 1,
         echoCancel: true,
         autoGain: true,
-        noiseSuppress: true
-    ));
+        noiseSuppress: true));
 
     _audioStreamSubscription = stream.listen((data) async {
       await _vadIterator.processAudioData(data);
@@ -119,7 +132,7 @@ class VadHandlerNonWeb implements VadHandlerBase {
     if (isDebug) debugPrint('stopListening');
     try {
       // Before stopping the audio stream, handle forced speech end if needed
-      if (_vadIterator.submitUserSpeechOnPause) {
+      if (_submitUserSpeechOnPause) {
         _vadIterator.forceEndSpeech();
       }
 
@@ -133,7 +146,6 @@ class VadHandlerNonWeb implements VadHandlerBase {
     }
   }
 
-
   @override
   void dispose() {
     if (isDebug) debugPrint('VadHandlerNonWeb: dispose');
@@ -146,4 +158,6 @@ class VadHandlerNonWeb implements VadHandlerBase {
   }
 }
 
-VadHandlerBase createVadHandler({required isDebug, modelPath}) => VadHandlerNonWeb(isDebug: isDebug, modelPath: modelPath);
+/// Create a VAD handler for the non-web platforms
+VadHandlerBase createVadHandler({required isDebug, modelPath}) =>
+    VadHandlerNonWeb(isDebug: isDebug, modelPath: modelPath);
