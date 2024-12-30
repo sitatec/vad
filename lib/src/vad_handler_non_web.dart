@@ -28,6 +28,7 @@ class VadHandlerNonWeb implements VadHandlerBase {
   /// Default Silero VAD Legacy (v4) model path
   static const String vadLegacyModelPath =
       'packages/vad/assets/models/silero_vad_legacy.onnx';
+
   /// Default Silero VAD V5 model path
   static const String vadV5ModelPath =
       'packages/vad/assets/models/silero_vad_v5.onnx';

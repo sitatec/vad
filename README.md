@@ -36,6 +36,8 @@ The package provides a simple API to start and stop VAD listening, configure VAD
 
     - [`onSpeechStart`](#--onspeechstart)
 
+    - [`onRealSpeechStart`](#--onrealspeechstart)
+
     - [`onVADMisfire`](#--onvadmisfire)
 
     - [`onError`](#--onerror)
@@ -60,11 +62,7 @@ Check out the [VAD Package Example App](https://keyur2maru.github.io/vad/) to se
 
 - **Cross-Platform Support:**  Works seamlessly on iOS, Android, and Web.
 
-- **Event Streams:**  Listen to events such as speech start, speech end, errors, and misfires.
-
-- **Configurable Parameters:**  Customize VAD behavior with various parameters.
-
-- **Easy Integration:**  Simple setup and usage within Flutter applications.
+- **Event Streams:**  Listen to events such as speech start, real speech start, speech end, errors, and misfires.
 
 ## Getting Started
 
@@ -78,8 +76,8 @@ To use VAD on the web, include the following scripts in your `web/index.html` fi
 ```html
 <!-- VAD Dependencies -->
 <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@ricky0123/vad-web@0.0.19/dist/bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/keyur2maru/vad_dart@latest/dist/vad_web.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/ganit-guru/vad-cdn@master/dist/bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/keyur2maru/vad_dart@v0.1.0-alpha/dist/vad_web.js"></script>
 ```
 
 #### iOS
@@ -128,15 +126,12 @@ android {
 
 ## Installation
 Add the VAD Package to your `pubspec.yaml` dependencies:
-Note: `audioplayers` is used for audio playback in the example below. You can replace it with any other audio player package of your choice.
-
 ```yaml
 dependencies:
   flutter:
     sdk: flutter
-  vad: ^0.0.4
+  vad: ^0.0.5
   permission_handler: ^11.3.1
-  audioplayers: ^6.1.0
 ```
 Then, run `flutter pub get` to fetch the packages.
 ## Usage
@@ -195,6 +190,13 @@ class _MyHomePageState extends State<MyHomePage> {
       debugPrint('Speech detected.');
       setState(() {
         receivedEvents.add('Speech detected.');
+      });
+    });
+
+    _vadHandler.onRealSpeechStart.listen((_) {
+      debugPrint('Real speech start detected (not a misfire).');
+      setState(() {
+        receivedEvents.add('Real speech start detected (not a misfire).');
       });
     });
 
@@ -283,9 +285,9 @@ class _MyHomePageState extends State<MyHomePage> {
 1. **Initialization:**
 - Initializes the `VadHandler` with debugging enabled.
 
-- Sets up listeners for various VAD events (`onSpeechStart`, `onSpeechEnd`, `onError`, `onVADMisfire`).
+- Sets up listeners for various VAD events (`onSpeechStart`, `onRealSpeechStart`, `onSpeechEnd`, `onVADMisfire`, `onError`).
 
-2. **Permissions:**
+2.  **Permissions:**
 - Requests microphone permission when the "Request Microphone Permission" button is pressed.
 
 3. **Listening Controls:**
@@ -307,7 +309,11 @@ class _MyHomePageState extends State<MyHomePage> {
 
 #### - **`startListening`**
   Starts the VAD with configurable parameters.
-  Note: The sample rate is fixed at 16kHz, which means one frame is equal to 1536 samples or 96ms.
+  Notes: 
+   - The sample rate is fixed at 16kHz, which means when using legacy model with default frameSamples value, one frame is equal to 1536 samples or 96ms.
+   - For Silero VAD v5 model, frameSamples must be set to 512 samples unlike the previous version, so one frame is equal to 32ms.
+   - `model` parameter can be set to 'legacy' or 'v5' to use the respective VAD model. Default is 'legacy'.
+   - `baseAssetPath` and `onnxWASMBasePath` are the default paths for the VAD JavaScript library and onnxruntime WASM files respectively. You can change them if you have your own hosting. Only applicable for the Web platform.
 
 ```dart
 void startListening({
@@ -318,6 +324,9 @@ void startListening({
   int frameSamples = 1536,
   int minSpeechFrames = 3,
   bool submitUserSpeechOnPause = false,
+  String model = 'legacy',
+  String baseAssetPath = 'https://cdn.jsdelivr.net/gh/ganit-guru/vad-cdn@master/dist/',
+  String onnxWASMBasePath = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/'
 });
 ```
 
@@ -335,40 +344,6 @@ void stopListening();
 
 ```dart
 void dispose();
-```
-
-### Event Streams
-
-#### - **`onSpeechEnd`**
-  Triggered when speech ends with optional audio data.
-
-
-```dart
-Stream<List<double>> get onSpeechEnd;
-```
-
-#### - **`onSpeechStart`**
-  Triggered when speech starts.
-
-
-```dart
-Stream<void> get onSpeechStart;
-```
-
-#### - **`onVADMisfire`**
-  Triggered when the VAD misfires.
-
-
-```dart
-Stream<void> get onVADMisfire;
-```
-
-#### - **`onError`**
-  Triggered when an error occurs.
-
-
-```dart
-Stream<String> get onError;
 ```
 
 ## Permissions

@@ -1,3 +1,7 @@
+## 0.0.5
+* Add support for Silero VAD v5 model.
+* Expose `onRealSpeechStart` callback to notify when the number of speech positive frames exceeds the minimum speech frames (i.e. not a misfire event).
+
 ## 0.0.4
 
 * Fixed a bug where default `modelPath` was not picked up, resulting in silent failure if `modelPath` was not provided.
