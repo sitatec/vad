@@ -123,6 +123,10 @@ class _MyHomePageState extends State<MyHomePage> {
       debugPrint('Speech detected.');
     });
 
+    _vadHandler.onRealSpeechStart.listen((_) {
+      debugPrint('Real speech start detected.');
+    });
+
     _vadHandler.onSpeechEnd.listen((List<double> samples) {
       setState(() {
         recordings.add(Recording(
