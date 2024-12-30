@@ -28,4 +28,3 @@ abstract class VadIteratorBase {
 
 /// Callback for VAD events.
 typedef VadEventCallback = void Function(VadEvent event);
-

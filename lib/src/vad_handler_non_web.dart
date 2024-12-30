@@ -25,8 +25,16 @@ class VadHandlerNonWeb implements VadHandlerBase {
   /// Sample rate
   static const int sampleRate = 16000;
 
+  /// Default Silero VAD Legacy (v4) model path
+  static const String vadLegacyModelPath =
+      'packages/vad/assets/models/silero_vad_legacy.onnx';
+  /// Default Silero VAD V5 model path
+  static const String vadV5ModelPath =
+      'packages/vad/assets/models/silero_vad_v5.onnx';
+
   final _onSpeechEndController = StreamController<List<double>>.broadcast();
   final _onSpeechStartController = StreamController<void>.broadcast();
+  final _onRealSpeechStartController = StreamController<void>.broadcast();
   final _onVADMisfireController = StreamController<void>.broadcast();
   final _onErrorController = StreamController<String>.broadcast();
 
@@ -37,15 +45,16 @@ class VadHandlerNonWeb implements VadHandlerBase {
   Stream<void> get onSpeechStart => _onSpeechStartController.stream;
 
   @override
+  Stream<void> get onRealSpeechStart => _onRealSpeechStartController.stream;
+
+  @override
   Stream<void> get onVADMisfire => _onVADMisfireController.stream;
 
   @override
   Stream<String> get onError => _onErrorController.stream;
 
   /// Constructor
-  VadHandlerNonWeb(
-      {required this.isDebug,
-      this.modelPath = 'packages/vad/assets/models/silero_vad.onnx'});
+  VadHandlerNonWeb({required this.isDebug, this.modelPath = ''});
 
   /// Handle VAD event
   void _handleVadEvent(VadEvent event) {
@@ -56,6 +65,9 @@ class VadHandlerNonWeb implements VadHandlerBase {
     switch (event.type) {
       case VadEventType.start:
         _onSpeechStartController.add(null);
+        break;
+      case VadEventType.realStart:
+        _onRealSpeechStartController.add(null);
         break;
       case VadEventType.end:
         if (event.audioData != null) {
@@ -70,8 +82,6 @@ class VadHandlerNonWeb implements VadHandlerBase {
       case VadEventType.error:
         _onErrorController.add(event.message);
         break;
-      default:
-        break;
     }
   }
 
@@ -83,19 +93,32 @@ class VadHandlerNonWeb implements VadHandlerBase {
       int redemptionFrames = 8,
       int frameSamples = 1536,
       int minSpeechFrames = 3,
-      bool submitUserSpeechOnPause = false}) async {
+      bool submitUserSpeechOnPause = false,
+      String model = 'legacy',
+      String baseAssetPath =
+          'https://cdn.jsdelivr.net/gh/ganit-guru/vad-cdn@master/dist/',
+      String onnxWASMBasePath =
+          'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/'}) async {
     if (!_isInitialized) {
       _vadIterator = VadIterator.create(
-          isDebug: isDebug,
-          sampleRate: sampleRate,
-          frameSamples: frameSamples,
-          positiveSpeechThreshold: positiveSpeechThreshold,
-          negativeSpeechThreshold: negativeSpeechThreshold,
-          redemptionFrames: redemptionFrames,
-          preSpeechPadFrames: preSpeechPadFrames,
-          minSpeechFrames: minSpeechFrames,
-          submitUserSpeechOnPause: submitUserSpeechOnPause
+        isDebug: isDebug,
+        sampleRate: sampleRate,
+        frameSamples: frameSamples,
+        positiveSpeechThreshold: positiveSpeechThreshold,
+        negativeSpeechThreshold: negativeSpeechThreshold,
+        redemptionFrames: redemptionFrames,
+        preSpeechPadFrames: preSpeechPadFrames,
+        minSpeechFrames: minSpeechFrames,
+        submitUserSpeechOnPause: submitUserSpeechOnPause,
+        model: model,
       );
+      if (modelPath.isEmpty) {
+        if (model == 'v5') {
+          modelPath = vadV5ModelPath;
+        } else {
+          modelPath = vadLegacyModelPath;
+        }
+      }
       await _vadIterator.initModel(modelPath);
       _vadIterator.setVadEventCallback(_handleVadEvent);
       _submitUserSpeechOnPause = submitUserSpeechOnPause;
@@ -153,6 +176,7 @@ class VadHandlerNonWeb implements VadHandlerBase {
     _vadIterator.release();
     _onSpeechEndController.close();
     _onSpeechStartController.close();
+    _onRealSpeechStartController.close();
     _onVADMisfireController.close();
     _onErrorController.close();
   }

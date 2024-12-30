@@ -40,6 +40,11 @@ class VadIteratorNonWeb implements VadIteratorBase {
   /// Flag to submit user speech on pause/stop event.
   bool submitUserSpeechOnPause = false;
 
+  /// Model name
+  /// * 'legacy' for Silero VAD Legacy model
+  /// * 'v5' for Silero VAD v5 model
+  String model;
+
   // Internal variables
   /// Flag to indicate speech detection state.
   bool speaking = false;
@@ -67,6 +72,8 @@ class VadIteratorNonWeb implements VadIteratorBase {
       2, List.filled(_batch, Float32List.fromList(List.filled(64, 0.0))));
   var _cell = List.filled(
       2, List.filled(_batch, Float32List.fromList(List.filled(64, 0.0))));
+  var _state = List.filled(
+      2, List.filled(_batch, Float32List.fromList(List.filled(128, 0.0))));
 
   /// Callback for VAD events.
   VadEventCallback? onVadEvent;
@@ -88,6 +95,7 @@ class VadIteratorNonWeb implements VadIteratorBase {
     required this.preSpeechPadFrames,
     required this.minSpeechFrames,
     required this.submitUserSpeechOnPause,
+    required this.model,
   }) : frameByteCount = frameSamples * 2;
 
   /// Initialize the VAD model from the given [modelPath].
@@ -126,6 +134,8 @@ class VadIteratorNonWeb implements VadIteratorBase {
         2, List.filled(_batch, Float32List.fromList(List.filled(64, 0.0))));
     _cell = List.filled(
         2, List.filled(_batch, Float32List.fromList(List.filled(64, 0.0))));
+    _state = List.filled(
+        2, List.filled(_batch, Float32List.fromList(List.filled(128, 0.0))));
   }
 
   /// Release the VAD iterator resources.
@@ -164,13 +174,60 @@ class VadIteratorNonWeb implements VadIteratorBase {
       return;
     }
 
-    // Run model inference
+    final (speechProb, modelOutputs) = await _runModelInference(data);
+
+    for (var element in modelOutputs) {
+      element?.release();
+    }
+
+    _currentSample += frameSamples;
+    _handleStateTransitions(speechProb, data);
+  }
+
+  /// Run model inference based on the selected model version
+  Future<(double, List<OrtValue?>)> _runModelInference(Float32List data) async {
+    if (model == 'v5') {
+      return _runV5ModelInference(data);
+    } else {
+      return _runLegacyModelInference(data);
+    }
+  }
+
+  /// Run inference for Silero VAD v5 model
+  Future<(double, List<OrtValue?>)> _runV5ModelInference(
+      Float32List data) async {
     final inputOrt =
-    OrtValueTensor.createTensorWithDataList(data, [_batch, frameSamples]);
+        OrtValueTensor.createTensorWithDataList(data, [_batch, frameSamples]);
+    final srOrt = OrtValueTensor.createTensorWithData(sampleRate);
+    final stateOrt = OrtValueTensor.createTensorWithDataList(_state);
+    final runOptions = OrtRunOptions();
+
+    final inputs = {'input': inputOrt, 'sr': srOrt, 'state': stateOrt};
+    final outputs = _session!.run(runOptions, inputs);
+
+    inputOrt.release();
+    srOrt.release();
+    stateOrt.release();
+    runOptions.release();
+
+    final speechProb = (outputs[0]?.value as List<List<double>>)[0][0];
+    _state = (outputs[1]?.value as List<List<List<double>>>)
+        .map((e) => e.map((e) => Float32List.fromList(e)).toList())
+        .toList();
+
+    return (speechProb, outputs);
+  }
+
+  /// Run inference for Silero VAD Legacy model
+  Future<(double, List<OrtValue?>)> _runLegacyModelInference(
+      Float32List data) async {
+    final inputOrt =
+        OrtValueTensor.createTensorWithDataList(data, [_batch, frameSamples]);
     final srOrt = OrtValueTensor.createTensorWithData(sampleRate);
     final hOrt = OrtValueTensor.createTensorWithDataList(_hide);
     final cOrt = OrtValueTensor.createTensorWithDataList(_cell);
     final runOptions = OrtRunOptions();
+
     final inputs = {'input': inputOrt, 'sr': srOrt, 'h': hOrt, 'c': cOrt};
     final outputs = _session!.run(runOptions, inputs);
 
@@ -180,7 +237,6 @@ class VadIteratorNonWeb implements VadIteratorBase {
     cOrt.release();
     runOptions.release();
 
-    // Output probability & update h,c recursively
     final speechProb = (outputs[0]?.value as List<List<double>>)[0][0];
     _hide = (outputs[1]?.value as List<List<List<double>>>)
         .map((e) => e.map((e) => Float32List.fromList(e)).toList())
@@ -188,13 +244,12 @@ class VadIteratorNonWeb implements VadIteratorBase {
     _cell = (outputs[2]?.value as List<List<List<double>>>)
         .map((e) => e.map((e) => Float32List.fromList(e)).toList())
         .toList();
-    for (var element in outputs) {
-      element?.release();
-    }
 
-    _currentSample += frameSamples;
+    return (speechProb, outputs);
+  }
 
-    // Handle state transitions
+  /// Handle state transitions based on speech probability
+  void _handleStateTransitions(double speechProb, Float32List data) {
     if (speechProb >= positiveSpeechThreshold) {
       // Speech-positive frame
       if (!speaking) {
@@ -203,7 +258,7 @@ class VadIteratorNonWeb implements VadIteratorBase {
           type: VadEventType.start,
           timestamp: _getCurrentTimestamp(),
           message:
-          'Speech started at ${_getCurrentTimestamp().toStringAsFixed(3)}s',
+              'Speech started at ${_getCurrentTimestamp().toStringAsFixed(3)}s',
         ));
         speechBuffer.addAll(preSpeechBuffer);
         preSpeechBuffer.clear();
@@ -211,50 +266,70 @@ class VadIteratorNonWeb implements VadIteratorBase {
       redemptionCounter = 0;
       speechBuffer.add(data);
       speechPositiveFrameCount++;
-    } else if (speechProb < negativeSpeechThreshold) {
-      // Speech-negative frame
-      if (speaking) {
-        if (++redemptionCounter >= redemptionFrames) {
-          // End of speech
-          speaking = false;
-          redemptionCounter = 0;
 
-          if (speechPositiveFrameCount >= minSpeechFrames) {
-            // Valid speech segment
-            onVadEvent?.call(VadEvent(
-              type: VadEventType.end,
-              timestamp: _getCurrentTimestamp(),
-              message:
-              'Speech ended at ${_getCurrentTimestamp().toStringAsFixed(3)}s',
-              audioData: _combineSpeechBuffer(),
-            ));
-          } else {
-            // Misfire
-            onVadEvent?.call(VadEvent(
-              type: VadEventType.misfire,
-              timestamp: _getCurrentTimestamp(),
-              message:
-              'Misfire detected at ${_getCurrentTimestamp().toStringAsFixed(3)}s',
-            ));
-          }
-          // Reset counters and buffers
-          speechPositiveFrameCount = 0;
-          speechBuffer.clear();
+      // Add validation event when speech frames exceed minimum threshold
+      if (speechPositiveFrameCount == minSpeechFrames) {
+        onVadEvent?.call(VadEvent(
+          type: VadEventType.realStart,
+          timestamp: _getCurrentTimestamp(),
+          message:
+              'Speech validated at ${_getCurrentTimestamp().toStringAsFixed(3)}s',
+        ));
+      }
+    } else if (speechProb < negativeSpeechThreshold) {
+      // Handle speech-negative frame
+      _handleSpeechNegativeFrame(data);
+    } else {
+      // Probability between thresholds
+      _handleIntermediateFrame(data);
+    }
+  }
+
+  /// Handle speech-negative frame
+  void _handleSpeechNegativeFrame(Float32List data) {
+    if (speaking) {
+      if (++redemptionCounter >= redemptionFrames) {
+        // End of speech
+        speaking = false;
+        redemptionCounter = 0;
+
+        if (speechPositiveFrameCount >= minSpeechFrames) {
+          // Valid speech segment
+          onVadEvent?.call(VadEvent(
+            type: VadEventType.end,
+            timestamp: _getCurrentTimestamp(),
+            message:
+                'Speech ended at ${_getCurrentTimestamp().toStringAsFixed(3)}s',
+            audioData: _combineSpeechBuffer(),
+          ));
         } else {
-          speechBuffer.add(data);
+          // Misfire
+          onVadEvent?.call(VadEvent(
+            type: VadEventType.misfire,
+            timestamp: _getCurrentTimestamp(),
+            message:
+                'Misfire detected at ${_getCurrentTimestamp().toStringAsFixed(3)}s',
+          ));
         }
+        // Reset counters and buffers
+        speechPositiveFrameCount = 0;
+        speechBuffer.clear();
       } else {
-        // Not speaking, maintain pre-speech buffer
-        _addToPreSpeechBuffer(data);
+        speechBuffer.add(data);
       }
     } else {
-      // Probability between thresholds, ignore frame for state transitions
-      if (speaking) {
-        speechBuffer.add(data);
-        redemptionCounter = 0;
-      } else {
-        _addToPreSpeechBuffer(data);
-      }
+      // Not speaking, maintain pre-speech buffer
+      _addToPreSpeechBuffer(data);
+    }
+  }
+
+  /// Handle frame with probability between thresholds
+  void _handleIntermediateFrame(Float32List data) {
+    if (speaking) {
+      speechBuffer.add(data);
+      redemptionCounter = 0;
+    } else {
+      _addToPreSpeechBuffer(data);
     }
   }
 
@@ -267,7 +342,7 @@ class VadIteratorNonWeb implements VadIteratorBase {
         type: VadEventType.end,
         timestamp: _getCurrentTimestamp(),
         message:
-        'Speech forcefully ended at ${_getCurrentTimestamp().toStringAsFixed(3)}s',
+            'Speech forcefully ended at ${_getCurrentTimestamp().toStringAsFixed(3)}s',
         audioData: _combineSpeechBuffer(),
       ));
       // Reset state
@@ -292,7 +367,7 @@ class VadIteratorNonWeb implements VadIteratorBase {
 
   Uint8List _combineSpeechBuffer() {
     final int totalLength =
-    speechBuffer.fold(0, (sum, frame) => sum + frame.length);
+        speechBuffer.fold(0, (sum, frame) => sum + frame.length);
     final Float32List combined = Float32List(totalLength);
     int offset = 0;
     for (var frame in speechBuffer) {
@@ -323,6 +398,7 @@ VadIteratorBase createVadIterator({
   required int preSpeechPadFrames,
   required int minSpeechFrames,
   required bool submitUserSpeechOnPause,
+  required String model,
 }) {
   return VadIteratorNonWeb(
     isDebug: isDebug,
@@ -334,5 +410,6 @@ VadIteratorBase createVadIterator({
     preSpeechPadFrames: preSpeechPadFrames,
     minSpeechFrames: minSpeechFrames,
     submitUserSpeechOnPause: submitUserSpeechOnPause,
+    model: model,
   );
 }

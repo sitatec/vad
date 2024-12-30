@@ -10,6 +10,9 @@ abstract class VadHandlerBase {
   /// Stream of speech start events
   Stream<void> get onSpeechStart;
 
+  /// Stream of real speech start events
+  Stream<void> get onRealSpeechStart;
+
   /// Stream of VAD misfire events
   Stream<void> get onVADMisfire;
 
@@ -24,7 +27,12 @@ abstract class VadHandlerBase {
       int redemptionFrames = 8,
       int frameSamples = 1536,
       int minSpeechFrames = 3,
-      bool submitUserSpeechOnPause = false});
+      bool submitUserSpeechOnPause = false,
+      String model = 'legacy',
+      String baseAssetPath =
+          'https://cdn.jsdelivr.net/gh/ganit-guru/vad-cdn@master/dist/',
+      String onnxWASMBasePath =
+          'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/'});
 
   /// Stop listening for speech events
   void stopListening();

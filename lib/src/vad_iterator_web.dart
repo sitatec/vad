@@ -37,16 +37,16 @@ class VadIteratorWeb implements VadIteratorBase {
 }
 
 /// Create VadHandlerNonWeb instance
-VadIteratorBase createVadIterator({
-  required bool isDebug,
-  required int sampleRate,
-  required int frameSamples,
-  required double positiveSpeechThreshold,
-  required double negativeSpeechThreshold,
-  required int redemptionFrames,
-  required int preSpeechPadFrames,
-  required int minSpeechFrames,
-  required bool submitUserSpeechOnPause,
-}) {
+VadIteratorBase createVadIterator(
+    {required bool isDebug,
+    required int sampleRate,
+    required int frameSamples,
+    required double positiveSpeechThreshold,
+    required double negativeSpeechThreshold,
+    required int redemptionFrames,
+    required int preSpeechPadFrames,
+    required int minSpeechFrames,
+    required bool submitUserSpeechOnPause,
+    required String model}) {
   return VadIteratorWeb();
 }

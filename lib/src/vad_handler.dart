@@ -6,14 +6,15 @@ import 'vad_handler_web.dart' if (dart.library.io) 'vad_handler_non_web.dart'
 
 /// VadHandler class
 class VadHandler {
-  /// Create a new instance of VadHandler
+  /// Create a new instance of VadHandler.
   /// [isDebug] flag
   /// [modelPath] path to the model file (optional and only used for non-web)
-  /// Default model path is 'packages/vad/assets/models/silero_vad.onnx'
-  /// Returns a new instance of VadHandlerBase
-  static VadHandlerBase create(
-      {required bool isDebug,
-      String modelPath = 'packages/vad/assets/models/silero_vad.onnx'}) {
+  /// For Silero V4, Default model path is 'packages/vad/assets/models/silero_vad_legacy.onnx'.
+  /// For Silero V5, Default model path is 'packages/vad/assets/models/silero_vad_v5.onnx'.
+  /// Leaving the model path empty will use the default model path based on the model parameter in the startListening method.
+  /// Available models: 'legacy', 'v5'.
+  /// Returns a new instance of VadHandlerBase.
+  static VadHandlerBase create({required bool isDebug, String modelPath = ''}) {
     return implementation.createVadHandler(
         isDebug: isDebug, modelPath: modelPath);
   }

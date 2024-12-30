@@ -16,7 +16,10 @@ external void startListeningImpl(
     int redemptionFrames,
     int frameSamples,
     int minSpeechFrames,
-    bool submitUserSpeechOnPause);
+    bool submitUserSpeechOnPause,
+    String model,
+    String baseAssetPath,
+    String onnxWASMBasePath);
 
 /// Stop listening for voice activity detection (JS-binding)
 @JS('stopListeningImpl')
@@ -40,6 +43,8 @@ class VadHandlerWeb implements VadHandlerBase {
       StreamController<List<double>>.broadcast();
   final StreamController<void> _onSpeechStartController =
       StreamController<void>.broadcast();
+  final StreamController<void> _onRealSpeechStartController =
+      StreamController<void>.broadcast();
   final StreamController<void> _onVADMisfireController =
       StreamController<void>.broadcast();
   final StreamController<String> _onErrorController =
@@ -61,6 +66,9 @@ class VadHandlerWeb implements VadHandlerBase {
   Stream<void> get onSpeechStart => _onSpeechStartController.stream;
 
   @override
+  Stream<void> get onRealSpeechStart => _onRealSpeechStartController.stream;
+
+  @override
   Stream<void> get onVADMisfire => _onVADMisfireController.stream;
 
   @override
@@ -74,7 +82,12 @@ class VadHandlerWeb implements VadHandlerBase {
       int redemptionFrames = 8,
       int frameSamples = 1536,
       int minSpeechFrames = 3,
-      bool submitUserSpeechOnPause = false}) {
+      bool submitUserSpeechOnPause = false,
+      String model = 'legacy',
+      String baseAssetPath =
+          'https://cdn.jsdelivr.net/gh/ganit-guru/vad-cdn@master/dist/',
+      String onnxWASMBasePath =
+          'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/'}) {
     if (isDebug) {
       debugPrint(
           'VadHandlerWeb: startListening: Calling startListeningImpl with parameters: '
@@ -84,7 +97,10 @@ class VadHandlerWeb implements VadHandlerBase {
           'redemptionFrames: $redemptionFrames, '
           'frameSamples: $frameSamples, '
           'minSpeechFrames: $minSpeechFrames, '
-          'submitUserSpeechOnPause: $submitUserSpeechOnPause');
+          'submitUserSpeechOnPause: $submitUserSpeechOnPause'
+          'model: $model'
+          'baseAssetPath: $baseAssetPath'
+          'onnxWASMBasePath: $onnxWASMBasePath');
     }
     startListeningImpl(
         positiveSpeechThreshold,
@@ -93,7 +109,10 @@ class VadHandlerWeb implements VadHandlerBase {
         redemptionFrames,
         frameSamples,
         minSpeechFrames,
-        submitUserSpeechOnPause);
+        submitUserSpeechOnPause,
+        model,
+        baseAssetPath,
+        onnxWASMBasePath);
   }
 
   /// Handle an event from the JS side
@@ -131,6 +150,12 @@ class VadHandlerWeb implements VadHandlerBase {
           }
           _onSpeechStartController.add(null);
           break;
+        case 'onRealSpeechStart':
+          if (isDebug) {
+            debugPrint('VadHandlerWeb: onRealSpeechStart');
+          }
+          _onRealSpeechStartController.add(null);
+          break;
         case 'onVADMisfire':
           if (isDebug) {
             debugPrint('VadHandlerWeb: onVADMisfire');
@@ -153,6 +178,7 @@ class VadHandlerWeb implements VadHandlerBase {
     }
     _onSpeechEndController.close();
     _onSpeechStartController.close();
+    _onRealSpeechStartController.close();
     _onVADMisfireController.close();
     _onErrorController.close();
   }

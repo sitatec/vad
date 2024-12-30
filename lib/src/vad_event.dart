@@ -6,6 +6,9 @@ enum VadEventType {
   /// Speech start event
   start,
 
+  /// Real speech start event
+  realStart,
+
   /// Speech end event
   end,
 
@@ -13,7 +16,7 @@ enum VadEventType {
   misfire,
 
   /// Error event
-  error
+  error,
 }
 
 /// VadEvent class
