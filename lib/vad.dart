@@ -1,6 +1,6 @@
 // vad.dart
 
-library vad;
+library;
 
 export 'src/vad_handler.dart';
 export 'src/vad_iterator.dart';
