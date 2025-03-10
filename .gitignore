@@ -31,3 +31,6 @@ build/
 example/.flutter-plugins
 example/.flutter-plugins-dependencies
 example/pubspec.lock
+
+.flutter-plugins
+.flutter-plugins-dependencies
