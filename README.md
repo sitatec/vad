@@ -1,42 +1,42 @@
-<!-- TOC start (generated with https://github.com/derlin/bitdowntoc) -->
-
-- [VAD](#vad)
-   * [Live Demo](#live-demo)
-   * [Features](#features)
-   * [Getting Started](#getting-started)
-      + [Prerequisites](#prerequisites)
-         - [Web](#web)
-         - [iOS](#ios)
-         - [Android](#android)
-   * [Installation](#installation)
-   * [Usage](#usage)
-      + [Example](#example)
-         - [Explanation of the Example](#explanation-of-the-example)
-   * [VadHandler API](#vadhandler-api)
-      + [Methods](#methods)
-         - [`create`](#create)
-         - [`startListening`](#startlistening)
-         - [`stopListening`](#stoplistening)
-         - [`dispose`](#dispose)
-   * [Events](#events)
-   * [Permissions](#permissions)
-      + [iOS](#ios-1)
-      + [Android](#android-1)
-      + [Web](#web-1)
-   * [Cleaning Up](#cleaning-up)
-   * [Tested Platforms](#tested-platforms)
-   * [Contributing](#contributing)
-   * [Acknowledgements](#acknowledgements)
-   * [License](#license)
-
-<!-- TOC end -->
-
 <!-- TOC --><a name="vad"></a>
 # VAD
 VAD is a Flutter library for Voice Activity Detection (VAD) across **iOS** , **Android** , and **Web**  platforms. This package allows applications to start and stop VAD-based listening and handle various VAD events seamlessly.
 Under the hood, the VAD Package uses `dart:js_interop` for Web to run [VAD JavaScript library](https://github.com/ricky0123/vad) and [onnxruntime](https://github.com/gtbluesky/onnxruntime_flutter) for iOS and Android utilizing onnxruntime library with full-feature parity with the JavaScript library.
 The package provides a simple API to start and stop VAD listening, configure VAD parameters, and handle VAD events such as speech start, speech end, errors, and misfires.
 
+## Table of Contents
+<!-- TOC start (generated with https://github.com/derlin/bitdowntoc) -->
+
+- [VAD](#vad)
+    * [Live Demo](#live-demo)
+    * [Features](#features)
+    * [Getting Started](#getting-started)
+        + [Prerequisites](#prerequisites)
+            - [Web](#web)
+            - [iOS](#ios)
+            - [Android](#android)
+    * [Installation](#installation)
+    * [Usage](#usage)
+        + [Example](#example)
+            - [Explanation of the Example](#explanation-of-the-example)
+    * [VadHandler API](#vadhandler-api)
+        + [Methods](#methods)
+            - [`create`](#create)
+            - [`startListening`](#startlistening)
+            - [`stopListening`](#stoplistening)
+            - [`dispose`](#dispose)
+    * [Events](#events)
+    * [Permissions](#permissions)
+        + [iOS](#ios-1)
+        + [Android](#android-1)
+        + [Web](#web-1)
+    * [Cleaning Up](#cleaning-up)
+    * [Tested Platforms](#tested-platforms)
+    * [Contributing](#contributing)
+    * [Acknowledgements](#acknowledgements)
+    * [License](#license)
+
+<!-- TOC end -->
 
 <!-- TOC --><a name="live-demo"></a>
 ## Live Demo
