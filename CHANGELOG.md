@@ -1,6 +1,7 @@
 ## 0.0.5
 
 * Add support for Silero VAD v5 model. (Default model is set to v4)
+* Automatically upsample audio to 16kHz if the input audio is not 16kHz (fixes model load failures due to lower sample rates).
 * Expose `onRealSpeechStart` event to notify when the number of speech positive frames exceeds the minimum speech frames (i.e. not a misfire event).
 * Expose `onFrameProcessed` event to track VAD decisions by exposing speech probabilities and frame data for real-time processing.
 * Update example app to show the `onRealSpeechStart` callback in action and introduce VAD Settings dialog to change the VAD model and other settings at runtime.
