@@ -34,6 +34,7 @@ flutter:
     - packages/vad/assets/vad_web.js
     - packages/vad/assets/ort.js
     - packages/vad/assets/ort-wasm-simd.wasm
+    - packages/vad/assets/ort-wasm-simd-threaded.wasm
 
 topics:
   - vad

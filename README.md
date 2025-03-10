@@ -81,6 +81,17 @@ To use VAD on the web, include the following scripts within the head and body ta
 
 You can also refer to the [VAD Example App](https://github.com/keyur2maru/vad/blob/master/example/web/index.html) for a complete example.
 
+**Tip: Enable WASM multithreading (SharedArrayBuffer) for a 10x performance improvement** 
+
+* For Production, send the following headers in your server response:
+  ```html
+  Cross-Origin-Embedder-Policy: require-corp
+  Cross-Origin-Opener-Policy: same-origin
+  ```
+
+* For Local, refer to the workaround applied in the GitHub Pages demo page for the example app. It is achieved with the inclusion of [enable-threads.js](https://github.com/keyur2maru/vad/blob/master/example/web/enable-threads.js) and loading it in the [web/index.html#L24](https://github.com/keyur2maru/vad/blob/master/example/web/index.html#L24) file in the example app.
+
+
 #### iOS
 For iOS, you need to configure microphone permissions and other settings in your `Info.plist` file.
 1. **Add Microphone Usage Description:** Open `ios/Runner/Info.plist` and add the following entries to request microphone access:
