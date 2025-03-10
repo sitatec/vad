@@ -90,7 +90,7 @@ class VadHandlerWeb implements VadHandlerBase {
       int minSpeechFrames = 3,
       bool submitUserSpeechOnPause = false,
       String model = 'legacy',
-      String baseAssetPath = 'packages/vad/assets/',
+      String baseAssetPath = 'assets/packages/vad/assets/',
       String onnxWASMBasePath = 'assets/packages/vad/assets/'}) {
     if (isDebug) {
       debugPrint(

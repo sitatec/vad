@@ -25,11 +25,11 @@ class VadHandlerNonWeb implements VadHandlerBase {
   /// Sample rate
   static const int sampleRate = 16000;
 
-  /// Default Silero VAD Legacy (v4) model path
+  /// Default Silero VAD Legacy (v4) model path (used for non-web)
   static const String vadLegacyModelPath =
       'packages/vad/assets/silero_vad_legacy.onnx';
 
-  /// Default Silero VAD V5 model path
+  /// Default Silero VAD V5 model path (used for non-web)
   static const String vadV5ModelPath = 'packages/vad/assets/silero_vad_v5.onnx';
 
   final _onSpeechEndController = StreamController<List<double>>.broadcast();
@@ -108,8 +108,8 @@ class VadHandlerNonWeb implements VadHandlerBase {
       int minSpeechFrames = 3,
       bool submitUserSpeechOnPause = false,
       String model = 'legacy',
-      String baseAssetPath = 'packages/vad/assets/',
-      String onnxWASMBasePath = 'packages/vad/assets/'}) async {
+      String baseAssetPath = 'assets/packages/vad/assets/',
+      String onnxWASMBasePath = 'assets/packages/vad/assets/'}) async {
     if (!_isInitialized) {
       _vadIterator = VadIterator.create(
         isDebug: isDebug,

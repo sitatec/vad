@@ -67,14 +67,14 @@ To use VAD on the web, include the following scripts within the head and body ta
 ```html
 <head>
   ...
-  <script src="packages/vad/assets/ort.js"></script>
+  <script src="assets/packages/vad/assets/ort.js"></script>
   ...
 </head>
 ...
 <body>
 ...
-<script src="packages/vad/assets/bundle.min.js" defer></script>
-<script src="packages/vad/assets/vad_web.js" defer></script>
+<script src="assets/packages/vad/assets/bundle.min.js" defer></script>
+<script src="assets/packages/vad/assets/vad_web.js" defer></script>
 ...
 </body>
 ```
@@ -339,8 +339,8 @@ void startListening({
   int minSpeechFrames = 3,
   bool submitUserSpeechOnPause = false,
   String model = 'legacy',
-  String baseAssetPath = 'packages/vad/assets/',
-  String onnxWASMBasePath = 'packages/vad/assets/',
+  String baseAssetPath = 'assets/packages/vad/assets/',
+  String onnxWASMBasePath = 'assets/packages/vad/assets/',
 });
 ```
 
