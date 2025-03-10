@@ -33,7 +33,8 @@ class VadHandlerNonWeb implements VadHandlerBase {
   static const String vadV5ModelPath = 'packages/vad/assets/silero_vad_v5.onnx';
 
   final _onSpeechEndController = StreamController<List<double>>.broadcast();
-  final _onFrameProcessedController = StreamController<({double isSpeech, double notSpeech, List<double> frame})>.broadcast();
+  final _onFrameProcessedController = StreamController<
+      ({double isSpeech, double notSpeech, List<double> frame})>.broadcast();
   final _onSpeechStartController = StreamController<void>.broadcast();
   final _onRealSpeechStartController = StreamController<void>.broadcast();
   final _onVADMisfireController = StreamController<void>.broadcast();
@@ -43,7 +44,8 @@ class VadHandlerNonWeb implements VadHandlerBase {
   Stream<List<double>> get onSpeechEnd => _onSpeechEndController.stream;
 
   @override
-  Stream<({double isSpeech, double notSpeech, List<double> frame})> get onFrameProcessed => _onFrameProcessedController.stream;
+  Stream<({double isSpeech, double notSpeech, List<double> frame})>
+      get onFrameProcessed => _onFrameProcessedController.stream;
 
   @override
   Stream<void> get onSpeechStart => _onSpeechStartController.stream;
@@ -83,9 +85,9 @@ class VadHandlerNonWeb implements VadHandlerBase {
       case VadEventType.frameProcessed:
         if (event.probabilities != null && event.frameData != null) {
           _onFrameProcessedController.add((
-          isSpeech: event.probabilities!.isSpeech,
-          notSpeech: event.probabilities!.notSpeech,
-          frame: event.frameData!
+            isSpeech: event.probabilities!.isSpeech,
+            notSpeech: event.probabilities!.notSpeech,
+            frame: event.frameData!
           ));
         }
         break;
@@ -95,7 +97,7 @@ class VadHandlerNonWeb implements VadHandlerBase {
       case VadEventType.error:
         _onErrorController.add(event.message);
         break;
-      }
+    }
   }
 
   @override

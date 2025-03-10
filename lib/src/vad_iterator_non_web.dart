@@ -183,11 +183,10 @@ class VadIteratorNonWeb implements VadIteratorBase {
     onVadEvent?.call(VadEvent(
       type: VadEventType.frameProcessed,
       timestamp: _getCurrentTimestamp(),
-      message: 'Frame processed at ${_getCurrentTimestamp().toStringAsFixed(3)}s',
+      message:
+          'Frame processed at ${_getCurrentTimestamp().toStringAsFixed(3)}s',
       probabilities: SpeechProbabilities(
-          isSpeech: speechProb,
-          notSpeech: 1.0 - speechProb
-      ),
+          isSpeech: speechProb, notSpeech: 1.0 - speechProb),
       frameData: frameData,
     ));
 

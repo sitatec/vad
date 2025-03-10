@@ -64,9 +64,7 @@ class _VadUIState extends State<VadUI> {
     await _audioPlayer.setAudioContext(
       audioplayers.AudioContext(
         iOS: audioplayers.AudioContextIOS(
-          options: const {
-            audioplayers.AVAudioSessionOptions.mixWithOthers
-          },
+          options: const {audioplayers.AVAudioSessionOptions.mixWithOthers},
           category: audioplayers.AVAudioSessionCategory.playAndRecord,
         ),
         android: const audioplayers.AudioContextAndroid(
@@ -250,7 +248,7 @@ class _VadUIState extends State<VadUI> {
                           const RoundSliderOverlayShape(overlayRadius: 14),
                       trackHeight: 4,
                     ),
-                    child:  Slider(
+                    child: Slider(
                       value: _position.inMilliseconds.toDouble(),
                       min: 0,
                       max: _duration.inMilliseconds.toDouble() + 1,

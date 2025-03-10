@@ -118,7 +118,8 @@ class _VadManagerState extends State<VadManager> {
           ? frameData.frame.sublist(0, 5)
           : frameData.frame;
 
-      debugPrint('Frame processed - isSpeech: $isSpeech, notSpeech: $notSpeech');
+      debugPrint(
+          'Frame processed - isSpeech: $isSpeech, notSpeech: $notSpeech');
       debugPrint('First few audio samples: $firstFiveSamples');
     });
 
