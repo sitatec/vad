@@ -84,10 +84,8 @@ class VadHandlerWeb implements VadHandlerBase {
       int minSpeechFrames = 3,
       bool submitUserSpeechOnPause = false,
       String model = 'legacy',
-      String baseAssetPath =
-          'https://cdn.jsdelivr.net/gh/ganit-guru/vad-cdn@master/dist/',
-      String onnxWASMBasePath =
-          'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/'}) {
+      String baseAssetPath = 'packages/vad/assets/',
+      String onnxWASMBasePath = 'assets/packages/vad/assets/'}) {
     if (isDebug) {
       debugPrint(
           'VadHandlerWeb: startListening: Calling startListeningImpl with parameters: '

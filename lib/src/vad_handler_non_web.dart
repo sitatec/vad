@@ -27,11 +27,10 @@ class VadHandlerNonWeb implements VadHandlerBase {
 
   /// Default Silero VAD Legacy (v4) model path
   static const String vadLegacyModelPath =
-      'packages/vad/assets/models/silero_vad_legacy.onnx';
+      'packages/vad/assets/silero_vad_legacy.onnx';
 
   /// Default Silero VAD V5 model path
-  static const String vadV5ModelPath =
-      'packages/vad/assets/models/silero_vad_v5.onnx';
+  static const String vadV5ModelPath = 'packages/vad/assets/silero_vad_v5.onnx';
 
   final _onSpeechEndController = StreamController<List<double>>.broadcast();
   final _onSpeechStartController = StreamController<void>.broadcast();
@@ -83,7 +82,7 @@ class VadHandlerNonWeb implements VadHandlerBase {
       case VadEventType.error:
         _onErrorController.add(event.message);
         break;
-    }
+      }
   }
 
   @override
@@ -96,10 +95,8 @@ class VadHandlerNonWeb implements VadHandlerBase {
       int minSpeechFrames = 3,
       bool submitUserSpeechOnPause = false,
       String model = 'legacy',
-      String baseAssetPath =
-          'https://cdn.jsdelivr.net/gh/ganit-guru/vad-cdn@master/dist/',
-      String onnxWASMBasePath =
-          'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/'}) async {
+      String baseAssetPath = 'packages/vad/assets/',
+      String onnxWASMBasePath = 'packages/vad/assets/'}) async {
     if (!_isInitialized) {
       _vadIterator = VadIterator.create(
         isDebug: isDebug,
