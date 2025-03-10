@@ -41,6 +41,8 @@ external void executeDartHandler();
 class VadHandlerWeb implements VadHandlerBase {
   final StreamController<List<double>> _onSpeechEndController =
       StreamController<List<double>>.broadcast();
+  final StreamController<({double isSpeech, double notSpeech, List<double> frame})> _onFrameProcessedController =
+      StreamController<({double isSpeech, double notSpeech, List<double> frame})>.broadcast();
   final StreamController<void> _onSpeechStartController =
       StreamController<void>.broadcast();
   final StreamController<void> _onRealSpeechStartController =
@@ -61,6 +63,10 @@ class VadHandlerWeb implements VadHandlerBase {
 
   @override
   Stream<List<double>> get onSpeechEnd => _onSpeechEndController.stream;
+
+  @override
+  Stream<({double isSpeech, double notSpeech, List<double> frame})> get onFrameProcessed =>
+      _onFrameProcessedController.stream;
 
   @override
   Stream<void> get onSpeechStart => _onSpeechStartController.stream;
@@ -142,6 +148,29 @@ class VadHandlerWeb implements VadHandlerBase {
             }
           }
           break;
+        case 'onFrameProcessed':
+          if (eventData.containsKey('probabilities') && eventData.containsKey('frame')) {
+            final double isSpeech = (eventData['probabilities']['isSpeech'] as num).toDouble();
+            final double notSpeech = (eventData['probabilities']['notSpeech'] as num).toDouble();
+            final List<double> frame = (eventData['frame'] as List)
+                .map((e) => (e as num).toDouble())
+                .toList();
+
+            if (isDebug) {
+              debugPrint('VadHandlerWeb: onFrameProcessed: isSpeech: $isSpeech, notSpeech: $notSpeech');
+            }
+
+            _onFrameProcessedController.add((
+            isSpeech: isSpeech,
+            notSpeech: notSpeech,
+            frame: frame
+            ));
+          } else {
+            if (isDebug) {
+              debugPrint('Invalid frame data received: $eventData');
+            }
+          }
+          break;
         case 'onSpeechStart':
           if (isDebug) {
             debugPrint('VadHandlerWeb: onSpeechStart');
@@ -175,6 +204,7 @@ class VadHandlerWeb implements VadHandlerBase {
       debugPrint('VadHandlerWeb: dispose');
     }
     _onSpeechEndController.close();
+    _onFrameProcessedController.close();
     _onSpeechStartController.close();
     _onRealSpeechStartController.close();
     _onVADMisfireController.close();

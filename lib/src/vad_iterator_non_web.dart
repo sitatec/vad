@@ -176,6 +176,21 @@ class VadIteratorNonWeb implements VadIteratorBase {
 
     final (speechProb, modelOutputs) = await _runModelInference(data);
 
+    // Create a copy of the frame data for the event
+    final frameData = data.toList();
+
+    // Emit the frame processed event
+    onVadEvent?.call(VadEvent(
+      type: VadEventType.frameProcessed,
+      timestamp: _getCurrentTimestamp(),
+      message: 'Frame processed at ${_getCurrentTimestamp().toStringAsFixed(3)}s',
+      probabilities: SpeechProbabilities(
+          isSpeech: speechProb,
+          notSpeech: 1.0 - speechProb
+      ),
+      frameData: frameData,
+    ));
+
     for (var element in modelOutputs) {
       element?.release();
     }

@@ -12,11 +12,26 @@ enum VadEventType {
   /// Speech end event
   end,
 
+  /// Frame processed event
+  frameProcessed,
+
   /// VAD misfire event
   misfire,
 
   /// Error event
   error,
+}
+
+/// VadProbabilities class
+class SpeechProbabilities {
+  /// Probability of speech
+  final double isSpeech;
+
+  /// Probability of not speech
+  final double notSpeech;
+
+  /// Constructor
+  SpeechProbabilities({required this.isSpeech, required this.notSpeech});
 }
 
 /// VadEvent class
@@ -33,11 +48,19 @@ class VadEvent {
   /// Audio data
   final Uint8List? audioData;
 
+  /// Speech probabilities
+  final SpeechProbabilities? probabilities;
+
+  /// Frame data
+  final List<double>? frameData;
+
   /// Constructor
   VadEvent({
     required this.type,
     required this.timestamp,
     required this.message,
     this.audioData,
+    this.probabilities,
+    this.frameData,
   });
 }

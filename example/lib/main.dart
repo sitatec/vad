@@ -111,6 +111,17 @@ class _VadManagerState extends State<VadManager> {
       debugPrint('Speech ended, recording added.');
     });
 
+    _vadHandler.onFrameProcessed.listen((frameData) {
+      final isSpeech = frameData.isSpeech;
+      final notSpeech = frameData.notSpeech;
+      final firstFiveSamples = frameData.frame.length >= 5
+          ? frameData.frame.sublist(0, 5)
+          : frameData.frame;
+
+      debugPrint('Frame processed - isSpeech: $isSpeech, notSpeech: $notSpeech');
+      debugPrint('First few audio samples: $firstFiveSamples');
+    });
+
     _vadHandler.onVADMisfire.listen((_) {
       setState(() {
         recordings.add(Recording(type: RecordingType.misfire));
