@@ -1,4 +1,3 @@
-<!-- TOC --><a name="vad"></a>
 # VAD
 VAD is a Flutter library for Voice Activity Detection (VAD) across **iOS** , **Android** , and **Web**  platforms. This package allows applications to start and stop VAD-based listening and handle various VAD events seamlessly.
 Under the hood, the VAD Package uses `dart:js_interop` for Web to run [VAD JavaScript library](https://github.com/ricky0123/vad) and [onnxruntime](https://github.com/gtbluesky/onnxruntime_flutter) for iOS and Android utilizing onnxruntime library with full-feature parity with the JavaScript library.
@@ -8,6 +7,7 @@ The package provides a simple API to start and stop VAD listening, configure VAD
 <!-- TOC start (generated with https://github.com/derlin/bitdowntoc) -->
 
 - [VAD](#vad)
+    * [Table of Contents](#table-of-contents)
     * [Live Demo](#live-demo)
     * [Features](#features)
     * [Getting Started](#getting-started)
@@ -25,7 +25,13 @@ The package provides a simple API to start and stop VAD listening, configure VAD
             - [`startListening`](#startlistening)
             - [`stopListening`](#stoplistening)
             - [`dispose`](#dispose)
-    * [Events](#events)
+        +  [Events](#events)
+            - [`onSpeechEnd`](#onspeechend)
+            - [`onSpeechStart`](#onspeechstart)
+            - [`onRealSpeechStart`](#onrealspeechstart)
+            - [`onVADMisfire`](#onvadmisfire)
+            - [`onFrameProcessed`](#onframeprocessed)
+            - [`onError`](#onerror)
     * [Permissions](#permissions)
         + [iOS](#ios-1)
         + [Android](#android-1)
@@ -38,28 +44,23 @@ The package provides a simple API to start and stop VAD listening, configure VAD
 
 <!-- TOC end -->
 
-<!-- TOC --><a name="live-demo"></a>
 ## Live Demo
 Check out the [VAD Package Example App](https://keyur2maru.github.io/vad/) to see the VAD Package in action on the Web platform.
 
-<!-- TOC --><a name="features"></a>
 ## Features
 
 - **Cross-Platform Support:**  Works seamlessly on iOS, Android, and Web.
 
-- **Event Streams:**  Listen to events such as speech start, real speech start, speech end, errors, and misfires.
+- **Event Streams:**  Listen to events such as speech start, real speech start, speech end, speech misfire, frame processed, and errors.
 
 - **Silero V4 and V5 Models:**  Supports both Silero VAD v4 and v5 models.
 
-<!-- TOC --><a name="getting-started"></a>
 ## Getting Started
 
-<!-- TOC --><a name="prerequisites"></a>
 ### Prerequisites
 
 Before integrating the VAD Package into your Flutter application, ensure that you have the necessary configurations for each target platform.
 
-<!-- TOC --><a name="web"></a>
 #### Web
 To use VAD on the web, include the following scripts within the head and body tags respectively in the `web/index.html` file to load the necessary VAD libraries:
 
@@ -80,7 +81,6 @@ To use VAD on the web, include the following scripts within the head and body ta
 
 You can also refer to the [VAD Example App](https://github.com/keyur2maru/vad/blob/master/example/web/index.html) for a complete example.
 
-<!-- TOC --><a name="ios"></a>
 #### iOS
 For iOS, you need to configure microphone permissions and other settings in your `Info.plist` file.
 1. **Add Microphone Usage Description:** Open `ios/Runner/Info.plist` and add the following entries to request microphone access:
@@ -106,7 +106,6 @@ post_install do |installer|
 end
 ```
 
-<!-- TOC --><a name="android"></a>
 #### Android
 For Android, configure the required permissions and build settings in your `AndroidManifest.xml` and `build.gradle` files.
 1. **Add Permissions:** Open `android/app/src/main/AndroidManifest.xml` and add the following permissions:
@@ -126,7 +125,6 @@ android {
 ```
 
 
-<!-- TOC --><a name="installation"></a>
 ## Installation
 Add the VAD Package to your `pubspec.yaml` dependencies:
 ```yaml
@@ -137,10 +135,8 @@ dependencies:
   permission_handler: ^11.3.1
 ```
 Then, run `flutter pub get` to fetch the packages.
-<!-- TOC --><a name="usage"></a>
 ## Usage
 
-<!-- TOC --><a name="example"></a>
 ### Example
 
 Below is a simple example demonstrating how to integrate and use the VAD Package in a Flutter application.
@@ -210,6 +206,17 @@ class _MyHomePageState extends State<MyHomePage> {
       setState(() {
         receivedEvents.add('Speech ended, first 10 samples: ${samples.take(10).toList()}');
       });
+    });
+
+    _vadHandler.onFrameProcessed.listen((frameData) {
+      final isSpeech = frameData.isSpeech;
+      final notSpeech = frameData.notSpeech;
+      final firstFewSamples = frameData.frame.take(5).toList();
+
+      debugPrint('Frame processed - Speech probability: $isSpeech, Not speech: $notSpeech');
+      debugPrint('First few audio samples: $firstFewSamples');
+
+      // You can use this for real-time audio processing
     });
 
     _vadHandler.onVADMisfire.listen((_) {
@@ -286,12 +293,11 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 }
 ```
-<!-- TOC --><a name="explanation-of-the-example"></a>
 #### Explanation of the Example
 1. **Initialization:**
 - Initializes the `VadHandler` with debugging enabled.
 
-- Sets up listeners for various VAD events (`onSpeechStart`, `onRealSpeechStart`, `onSpeechEnd`, `onVADMisfire`, `onError`).
+- Sets up listeners for various VAD events (`onSpeechStart`, `onRealSpeechStart`, `onSpeechEnd`, `onFrameProcessed`, `onVADMisfire`, `onError`).
 
 2.  **Permissions:**
 - Requests microphone permission when the "Request Microphone Permission" button is pressed.
@@ -306,18 +312,15 @@ class _MyHomePageState extends State<MyHomePage> {
 
 - Updates the UI based on the received events.
 
-<!-- TOC --><a name="vadhandler-api"></a>
+**Note: For Real-time Audio Processing, listen to the onFrameProcessed events to access raw audio frames and speech probabilities as they're processed.**
 ## VadHandler API
 
-<!-- TOC --><a name="methods"></a>
 ### Methods
 
 
-<!-- TOC --><a name="create"></a>
 #### `create`
 Creates a new instance of the `VadHandler` with optional debugging enabled with the `isDebug` parameter and optional configurable model path with the `modelPath` parameter but it's only applicable for the iOS and Android platforms. It has no effect on the Web platform.
 
-<!-- TOC --><a name="startlistening"></a>
 #### `startListening`
 Starts the VAD with configurable parameters.
 Notes:
@@ -341,7 +344,6 @@ void startListening({
 });
 ```
 
-<!-- TOC --><a name="stoplistening"></a>
 #### `stopListening`
 Stops the VAD session.
 
@@ -350,7 +352,6 @@ Stops the VAD session.
 void stopListening();
 ```
 
-<!-- TOC --><a name="dispose"></a>
 #### `dispose`
 Disposes the VADHandler and closes all streams.
 
@@ -359,37 +360,49 @@ Disposes the VADHandler and closes all streams.
 void dispose();
 ```
 
-<!-- TOC --><a name="events"></a>
 ## Events
-Available event streams to listen to various VAD events: `onSpeechEnd`, `onSpeechStart`, `onRealSpeechStart`, `onVADMisfire`, and `onError`.
+Available event streams to listen to various VAD events:
+
+#### `onSpeechEnd`
+Emitted when speech end is detected, providing audio samples.
+
+#### `onSpeechStart`
+Emitted when speech start is detected.
+
+#### `onRealSpeechStart`
+Emitted when actual speech is confirmed (exceeds minimum frames threshold).
+
+#### `onVADMisfire`
+Emitted when speech was initially detected but didn't meet the minimum speech frames threshold.
+
+#### `onFrameProcessed`
+Emitted after each audio frame is processed, providing speech probabilities and raw audio data.
+
+#### `onError`
+Emitted when an error occurs.
 
 
-<!-- TOC --><a name="permissions"></a>
 ## Permissions
 
 Proper handling of microphone permissions is crucial for the VAD Package to function correctly on all platforms.
 
-<!-- TOC --><a name="ios-1"></a>
 ### iOS
 
 - **Configuration:** Ensure that `NSMicrophoneUsageDescription` is added to your `Info.plist` with a descriptive message explaining why the app requires microphone access.
 
 - **Runtime Permission:** Request microphone permission at runtime using the `permission_handler` package.
 
-<!-- TOC --><a name="android-1"></a>
 ### Android
 
 - **Configuration:** Add the `RECORD_AUDIO`, `MODIFY_AUDIO_SETTINGS`, and `INTERNET` permissions to your `AndroidManifest.xml`.
 
 - **Runtime Permission:** Request microphone permission at runtime using the `permission_handler` package.
 
-<!-- TOC --><a name="web-1"></a>
 ### Web
 
 - **Browser Permissions:**
   Microphone access is managed by the browser. Users will be prompted to grant microphone access when the VAD starts listening.
 
-<!-- TOC --><a name="cleaning-up"></a>
 ## Cleaning Up
 
 To prevent memory leaks and ensure that all resources are properly released, always call the `dispose` method on the `VadHandler` instance when it's no longer needed.
@@ -398,7 +411,6 @@ To prevent memory leaks and ensure that all resources are properly released, alw
 vadHandler.dispose();
 ```
 
-<!-- TOC --><a name="tested-platforms"></a>
 ## Tested Platforms
 The VAD Package has been tested on the following platforms:
 
@@ -406,16 +418,13 @@ The VAD Package has been tested on the following platforms:
 - **Android:**  Tested on Lenovo Tab M8 Running Android 10.
 - **Web:**  Tested on Chrome Mac/Windows/Android/iOS, Safari Mac/iOS.
 
-<!-- TOC --><a name="contributing"></a>
 ## Contributing
 Contributions are welcome! Please feel free to submit a pull request or open an issue if you encounter any problems or have suggestions for improvements.
 
-<!-- TOC --><a name="acknowledgements"></a>
 ## Acknowledgements
 Special thanks to [Ricky0123](https://github.com/ricky0123) for creating the [VAD JavaScript library](https://github.com/ricky0123/vad), [gtbluesky](https://github.com/gtbluesky) for building the [onnxruntime package](https://github.com/gtbluesky/onnxruntime_flutter) and Silero Team for the [VAD model](https://github.com/snakers4/silero-vad) used in the library.
 
 
-<!-- TOC --><a name="license"></a>
 ## License
 This project is licensed under the [MIT License](https://opensource.org/license/mit). See the [LICENSE](https://github.com/keyur2maru/vad/blob/master/LICENSE)  file for details.
 
