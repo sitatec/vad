@@ -1,6 +1,9 @@
 ## 0.0.5
-* Add support for Silero VAD v5 model.
+
+* Add support for Silero VAD v5 model. (Default model is set to v4)
 * Expose `onRealSpeechStart` callback to notify when the number of speech positive frames exceeds the minimum speech frames (i.e. not a misfire event).
+* Update example app to show the `onRealSpeechStart` callback in action and introduce VAD Settings dialog to change the VAD model and other settings at runtime.
+* For web platform, bundle the required files within the package to avoid download failures when fetching from CDNs and to ensure offline support.
 
 ## 0.0.4
 
