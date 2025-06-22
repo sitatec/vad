@@ -21,7 +21,8 @@
   - Non-Web: Use custom `RecordConfig` if provided, otherwise fall back to default configuration with 16kHz sample rate, PCM16 encoding, echo cancellation, auto gain, and noise suppression.
   - Web: Accept the parameter for compatibility but ignore it (not applicable for web platform).
 * Bump `record` package to version 6.0.0
-* Bump `permission_handler` package to version 12.0.0
+* Example: Bump `permission_handler` package to version 12.0.0+1
+* Example: Bump `audioplayers` package to version 6.5.0
 
 ## 0.0.5
 
