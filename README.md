@@ -264,7 +264,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   void dispose() {
-    _vadHandler.dispose();
+    _vadHandler.dispose(); // Note: dispose() is called without await in Widget.dispose()
     super.dispose();
   }
 
@@ -277,12 +277,12 @@ class _MyHomePageState extends State<MyHomePage> {
         children: [
           ElevatedButton.icon(
             onPressed: () async {
+              if (isListening) {
+                await _vadHandler.stopListening();
+              } else {
+                await _vadHandler.startListening();
+              }
               setState(() {
-                if (isListening) {
-                  _vadHandler.stopListening();
-                } else {
-                  _vadHandler.startListening();
-                }
                 isListening = !isListening;
               });
             },
@@ -350,15 +350,16 @@ class _MyHomePageState extends State<MyHomePage> {
 Creates a new instance of the `VadHandler` with optional debugging enabled with the `isDebug` parameter and optional configurable model path with the `modelPath` parameter but it's only applicable for the iOS and Android platforms. It has no effect on the Web platform.
 
 #### `startListening`
-Starts the VAD with configurable parameters.
+Starts the VAD with configurable parameters. Returns a `Future<void>` that completes when the VAD session has started.
 Notes:
 - The sample rate is fixed at 16kHz, which means when using legacy model with default frameSamples value, one frame is equal to 1536 samples or 96ms.
 - For Silero VAD v5 model, frameSamples must be set to 512 samples unlike the previous version, so one frame is equal to 32ms.
 - `model` parameter can be set to 'legacy' or 'v5' to use the respective VAD model. Default is 'legacy'.
 - `baseAssetPath` and `onnxWASMBasePath` are the default paths for the VAD JavaScript library and onnxruntime WASM files respectively. Currently, they are bundled with the package but can be overridden if needed by providing custom paths or CDN URLs. **<u>Only applicable for the Web platform.</u>**
+- `recordConfig` allows you to provide custom recording configuration for non-web platforms (iOS/Android). If not provided, default configuration with 16kHz sample rate, PCM16 encoding, echo cancellation, auto gain, and noise suppression will be used. **<u>Only applicable for non-web platforms (iOS/Android).</u>**
 
 ```dart
-void startListening({
+Future<void> startListening({
   double positiveSpeechThreshold = 0.5,
   double negativeSpeechThreshold = 0.35,
   int preSpeechPadFrames = 1,
@@ -369,32 +370,33 @@ void startListening({
   String model = 'legacy',
   String baseAssetPath = 'assets/packages/vad/assets/',
   String onnxWASMBasePath = 'assets/packages/vad/assets/',
+  RecordConfig? recordConfig,
 });
 ```
 
 #### `stopListening`
-Stops the VAD session.
+Stops the VAD session. Returns a `Future<void>` that completes when the VAD session has stopped.
 
 
 ```dart
-void stopListening();
+Future<void> stopListening();
 ```
 
 #### `pauseListening`
-Pauses VAD-based listening without fully stopping the audio stream.
+Pauses VAD-based listening without fully stopping the audio stream. Returns a `Future<void>` that completes when the VAD session has been paused.
 
 Note: If `submitUserSpeechOnPause` was enabled, any in-flight speech will immediately be submitted (`forceEndSpeech()`).
 
 ```dart
-void pauseListening();
+Future<void> pauseListening();
 ```
 
 #### `dispose`
-Disposes the VADHandler and closes all streams.
+Disposes the VADHandler and closes all streams. Returns a `Future<void>` that completes when all resources have been disposed.
 
 
 ```dart
-void dispose();
+Future<void> dispose();
 ```
 
 ## Events
@@ -442,9 +444,13 @@ Proper handling of microphone permissions is crucial for the VAD Package to func
 
 ## Cleaning Up
 
-To prevent memory leaks and ensure that all resources are properly released, always call the `dispose` method on the `VadHandler` instance when it's no longer needed.
+To prevent memory leaks and ensure that all resources are properly released, always call the `dispose` method on the `VadHandler` instance when it's no longer needed. Since `dispose()` is now async, use `await` when possible:
 
 ```dart
+// When called from an async context
+await vadHandler.dispose();
+
+// In Widget.dispose() (synchronous context), call without await
 vadHandler.dispose();
 ```
 
