@@ -1,7 +1,23 @@
 # VAD
+[![pub package](https://img.shields.io/pub/v/vad.svg)](https://pub.dev/packages/vad)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub Repo](https://img.shields.io/badge/GitHub-Repo-blue.svg)](https://github.com/keyur2maru/vad)
+<p align="center">
+  <img src="https://raw.githubusercontent.com/keyur2maru/vad/master/img/vad.svg" max-height="100" alt="VAD" />
+</p>
+
+
 VAD is a Flutter library for Voice Activity Detection (VAD) across **iOS** , **Android** , and **Web**  platforms. This package allows applications to start and stop VAD-based listening and handle various VAD events seamlessly.
 Under the hood, the VAD Package uses `dart:js_interop` for Web to run [VAD JavaScript library](https://github.com/ricky0123/vad) and [onnxruntime](https://github.com/gtbluesky/onnxruntime_flutter) for iOS and Android utilizing onnxruntime library with full-feature parity with the JavaScript library.
 The package provides a simple API to start and stop VAD listening, configure VAD parameters, and handle VAD events such as speech start, speech end, errors, and misfires.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/keyur2maru/vad/master/img/screenshot-1.png" alt="Screenshot 1" />
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/keyur2maru/vad/master/img/screenshot-2.png" alt="Screenshot 2" />
+</p>
 
 ## Table of Contents
 <!-- TOC start (generated with https://github.com/derlin/bitdowntoc) -->
