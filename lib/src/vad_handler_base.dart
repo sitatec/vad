@@ -1,6 +1,7 @@
 // vad_handler_base.dart
 
 import 'dart:async';
+import 'package:record/record.dart';
 
 /// Abstract class for VAD handler
 abstract class VadHandlerBase {
@@ -24,7 +25,7 @@ abstract class VadHandlerBase {
   Stream<String> get onError;
 
   /// Start/Resume listening for speech events
-  void startListening(
+  Future<void> startListening(
       {double positiveSpeechThreshold = 0.5,
       double negativeSpeechThreshold = 0.35,
       int preSpeechPadFrames = 1,
@@ -34,14 +35,15 @@ abstract class VadHandlerBase {
       bool submitUserSpeechOnPause = false,
       String model = 'legacy',
       String baseAssetPath = 'assets/packages/vad/assets/',
-      String onnxWASMBasePath = 'assets/packages/vad/assets/'});
+      String onnxWASMBasePath = 'assets/packages/vad/assets/',
+      RecordConfig? recordConfig});
 
   /// Stop listening for speech events
-  void stopListening();
+  Future<void> stopListening();
 
   /// Pause listening for speech events
-  void pauseListening();
+  Future<void> pauseListening();
 
   /// Dispose the VAD handler
-  void dispose();
+  Future<void> dispose();
 }

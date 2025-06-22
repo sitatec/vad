@@ -114,7 +114,8 @@ class VadHandlerNonWeb implements VadHandlerBase {
       bool submitUserSpeechOnPause = false,
       String model = 'legacy',
       String baseAssetPath = 'assets/packages/vad/assets/',
-      String onnxWASMBasePath = 'assets/packages/vad/assets/'}) async {
+      String onnxWASMBasePath = 'assets/packages/vad/assets/',
+      RecordConfig? recordConfig}) async {
     // If we're paused, just resume processing
     if (_isPaused && _audioStreamSubscription != null) {
       if (isDebug) debugPrint('VadHandlerNonWeb: Resuming from paused state');
@@ -162,14 +163,16 @@ class VadHandlerNonWeb implements VadHandlerBase {
     _isPaused = false;
 
     // Start recording with a stream
-    final stream = await _audioRecorder.startStream(const RecordConfig(
-        encoder: AudioEncoder.pcm16bits,
-        sampleRate: sampleRate,
-        bitRate: 16,
-        numChannels: 1,
-        echoCancel: true,
-        autoGain: true,
-        noiseSuppress: true));
+    final config = recordConfig ??
+        const RecordConfig(
+            encoder: AudioEncoder.pcm16bits,
+            sampleRate: sampleRate,
+            bitRate: 16,
+            numChannels: 1,
+            echoCancel: true,
+            autoGain: true,
+            noiseSuppress: true);
+    final stream = await _audioRecorder.startStream(config);
 
     _audioStreamSubscription = stream.listen((data) async {
       // Only process audio data if not paused
@@ -201,7 +204,7 @@ class VadHandlerNonWeb implements VadHandlerBase {
   }
 
   @override
-  void pauseListening() {
+  Future<void> pauseListening() async {
     if (isDebug) debugPrint('pauseListening');
     // Set paused flag to true to ignore incoming audio data
     _isPaused = true;
@@ -213,9 +216,13 @@ class VadHandlerNonWeb implements VadHandlerBase {
   }
 
   @override
-  void dispose() {
+  Future<void> dispose() async {
     if (isDebug) debugPrint('VadHandlerNonWeb: dispose');
-    stopListening();
+    await stopListening();
+    await _audioRecorder.dispose();
+    _audioStreamSubscription?.cancel();
+    _audioStreamSubscription = null;
+    _isInitialized = false;
     _vadIterator.release();
     _onSpeechEndController.close();
     _onFrameProcessedController.close();

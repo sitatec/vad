@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'dart:js_interop';
 import 'dart:js_interop_unsafe';
 import 'package:flutter/foundation.dart';
+import 'package:record/record.dart';
 import 'vad_handler_base.dart';
 
 /// Start listening for voice activity detection (JS-binding)
@@ -91,7 +92,7 @@ class VadHandlerWeb implements VadHandlerBase {
   Stream<String> get onError => _onErrorController.stream;
 
   @override
-  void startListening(
+  Future<void> startListening(
       {double positiveSpeechThreshold = 0.5,
       double negativeSpeechThreshold = 0.35,
       int preSpeechPadFrames = 1,
@@ -101,7 +102,8 @@ class VadHandlerWeb implements VadHandlerBase {
       bool submitUserSpeechOnPause = false,
       String model = 'legacy',
       String baseAssetPath = 'assets/packages/vad/assets/',
-      String onnxWASMBasePath = 'assets/packages/vad/assets/'}) {
+      String onnxWASMBasePath = 'assets/packages/vad/assets/',
+      RecordConfig? recordConfig}) async {
     if (isDebug) {
       debugPrint(
           'VadHandlerWeb: startListening: Calling startListeningImpl with parameters: '
@@ -210,7 +212,7 @@ class VadHandlerWeb implements VadHandlerBase {
   }
 
   @override
-  void dispose() {
+  Future<void> dispose() async {
     if (isDebug) {
       debugPrint('VadHandlerWeb: dispose');
     }
@@ -223,7 +225,7 @@ class VadHandlerWeb implements VadHandlerBase {
   }
 
   @override
-  void stopListening() {
+  Future<void> stopListening() async {
     if (isDebug) {
       debugPrint('VadHandlerWeb: stopListening');
     }
@@ -231,7 +233,7 @@ class VadHandlerWeb implements VadHandlerBase {
   }
 
   @override
-  void pauseListening() {
+  Future<void> pauseListening() async {
     if (isDebug) {
       debugPrint('VadHandlerWeb: pauseListening');
     }
