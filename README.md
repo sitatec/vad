@@ -54,6 +54,12 @@ The package provides a simple API to start and stop VAD listening, configure VAD
         + [Android](#android-1)
         + [Web](#web-1)
     * [Cleaning Up](#cleaning-up)
+    * [Troubleshooting](#troubleshooting)
+        + [iOS Issues](#ios-issues)
+            - [TestFlight Build Error: "Failed to lookup symbol 'OrtGetApiBase'"](#testflight-build-error-failed-to-lookup-symbol-ortgetapibase)
+        + [Android Issues](#android-issues)
+            - [Missing libonnxruntime.so Library Error](#missing-libonnxruntimeso-library-error)
+            - [Echo Cancellation Not Working on Some Android Devices](#echo-cancellation-not-working-on-some-android-devices)
     * [Tested Platforms](#tested-platforms)
     * [Contributing](#contributing)
     * [Acknowledgements](#acknowledgements)
@@ -453,6 +459,94 @@ await vadHandler.dispose();
 // In Widget.dispose() (synchronous context), call without await
 vadHandler.dispose();
 ```
+
+## Troubleshooting
+
+### iOS Issues
+
+#### TestFlight Build Error: "Failed to lookup symbol 'OrtGetApiBase'"
+
+If you encounter this error when uploading to TestFlight:
+```
+flutter: VAD model initialization failed: Invalid argument(s): Failed to lookup symbol 'OrtGetApiBase': dlsym(RTLD_DEFAULT, OrtGetApiBase): symbol not found
+```
+
+**Fix:** Configure Xcode build settings to prevent symbol stripping:
+1. Open Xcode → Runner.xcodeproj
+2. Select "Targets-Runner" → Build Settings Tab
+3. Navigate to the Deployment category
+4. Set "Strip Linked Product" to **"No"**
+5. Set "Strip Style" to **"Non-Global-Symbols"**
+
+*Solution found at: https://github.com/gtbluesky/onnxruntime_flutter/issues/24#issuecomment-2419096341*
+
+### Android Issues
+
+#### Missing libonnxruntime.so Library Error
+
+Some Android devices may report this error:
+```
+VAD model initialization failed: Invalid argument(s): Failed to load dynamic library 'libonnxruntime.so': dlopen failed: library "libonnxruntime.so" not found
+```
+
+**Fix:** Use a specific commit of the onnxruntime package by adding this to your `pubspec.yaml`:
+
+```yaml
+dependency_overrides:
+  onnxruntime:
+    git:
+      url: https://github.com/gtbluesky/onnxruntime_flutter.git
+      ref: 526de653892a84af3e1a541e49d4f4b3042bb2cd
+```
+
+*Solution found at: https://github.com/gtbluesky/onnxruntime_flutter/pull/31*
+
+#### Echo Cancellation Not Working on Some Android Devices
+
+Some Android devices, particularly Samsung devices (e.g., Samsung S20), may experience issues with echo cancellation not functioning properly, while the same code works fine on other devices (e.g., Lenovo Tab M8).
+
+**Fix:** Use a patched version of the record package with improved audio configuration. Add this to your `pubspec.yaml`:
+
+```yaml
+dependency_overrides:
+  record:
+    git:
+      url: https://github.com/keyur2maru/record.git
+      path: record
+  record_platform_interface:
+    git:
+      url: https://github.com/keyur2maru/record.git
+      path: record_platform_interface
+  record_android:
+    git:
+      url: https://github.com/keyur2maru/record.git
+      path: record_android
+```
+
+**Usage example:**
+
+```dart
+await _vadHandler.startListening(
+  recordConfig: const RecordConfig(
+    encoder: AudioEncoder.pcm16bits,
+    sampleRate: 16000,
+    numChannels: 1,
+    echoCancel: true,
+    noiseSuppress: true,
+    autoGain: true,
+    androidConfig: AndroidRecordConfig(
+      audioSource: AndroidAudioSource.voiceCommunication,
+      audioManagerMode: AudioManagerMode.modeInCommunication,
+      setSpeakerphoneOn: true,
+    ),
+  ),
+);
+```
+
+This fix leverages `AudioManager.MODE_IN_COMMUNICATION` and `AudioManager.setSpeakerPhone(true)` along with the `android.permission.MODIFY_AUDIO_SETTINGS` permission to resolve echo cancellation issues.
+
+*Note: An official fix is pending in the upstream record package: https://github.com/llfbandit/record/commit/a24931a8e344410b68f36b1182a600f4e33bff42*
+
 
 ## Tested Platforms
 The VAD Package has been tested on the following platforms:
