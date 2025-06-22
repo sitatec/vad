@@ -22,6 +22,9 @@ class VadHandlerNonWeb implements VadHandlerBase {
   bool _isInitialized = false;
   bool _submitUserSpeechOnPause = false;
 
+  /// Flag to indicate if audio processing is paused
+  bool _isPaused = false;
+
   /// Sample rate
   static const int sampleRate = 16000;
 
@@ -112,6 +115,13 @@ class VadHandlerNonWeb implements VadHandlerBase {
       String model = 'legacy',
       String baseAssetPath = 'assets/packages/vad/assets/',
       String onnxWASMBasePath = 'assets/packages/vad/assets/'}) async {
+    // If we're paused, just resume processing
+    if (_isPaused && _audioStreamSubscription != null) {
+      if (isDebug) debugPrint('VadHandlerNonWeb: Resuming from paused state');
+      _isPaused = false;
+      return;
+    }
+
     if (!_isInitialized) {
       _vadIterator = VadIterator.create(
         isDebug: isDebug,
@@ -148,6 +158,9 @@ class VadHandlerNonWeb implements VadHandlerBase {
       return;
     }
 
+    // Reset pause state when starting listening
+    _isPaused = false;
+
     // Start recording with a stream
     final stream = await _audioRecorder.startStream(const RecordConfig(
         encoder: AudioEncoder.pcm16bits,
@@ -159,7 +172,11 @@ class VadHandlerNonWeb implements VadHandlerBase {
         noiseSuppress: true));
 
     _audioStreamSubscription = stream.listen((data) async {
-      await _vadIterator.processAudioData(data);
+      // Only process audio data if not paused
+      if (!_isPaused) {
+        await _vadIterator.processAudioData(data);
+      }
+      // When paused, incoming data is received but ignored
     });
   }
 
@@ -176,9 +193,22 @@ class VadHandlerNonWeb implements VadHandlerBase {
       _audioStreamSubscription = null;
       await _audioRecorder.stop();
       _vadIterator.reset();
+      _isPaused = false;
     } catch (e) {
       _onErrorController.add(e.toString());
       if (isDebug) debugPrint('Error stopping audio stream: $e');
+    }
+  }
+
+  @override
+  void pauseListening() {
+    if (isDebug) debugPrint('pauseListening');
+    // Set paused flag to true to ignore incoming audio data
+    _isPaused = true;
+
+    // If submitUserSpeechOnPause is enabled, force end speech on pause
+    if (_submitUserSpeechOnPause) {
+      _vadIterator.forceEndSpeech();
     }
   }
 

@@ -23,7 +23,7 @@ abstract class VadHandlerBase {
   /// Stream of error events
   Stream<String> get onError;
 
-  /// Start listening for speech events
+  /// Start/Resume listening for speech events
   void startListening(
       {double positiveSpeechThreshold = 0.5,
       double negativeSpeechThreshold = 0.35,
@@ -38,6 +38,9 @@ abstract class VadHandlerBase {
 
   /// Stop listening for speech events
   void stopListening();
+
+  /// Pause listening for speech events
+  void pauseListening();
 
   /// Dispose the VAD handler
   void dispose();

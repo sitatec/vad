@@ -25,6 +25,10 @@ external void startListeningImpl(
 @JS('stopListeningImpl')
 external void stopListeningImpl();
 
+/// Pause listening for voice activity detection (JS-binding)
+@JS('pauseListeningImpl')
+external void pauseListeningImpl();
+
 /// Check if the VAD is currently listening (JS-binding)
 @JS('isListeningNow')
 external bool isListeningNow();
@@ -224,6 +228,14 @@ class VadHandlerWeb implements VadHandlerBase {
       debugPrint('VadHandlerWeb: stopListening');
     }
     stopListeningImpl();
+  }
+
+  @override
+  void pauseListening() {
+    if (isDebug) {
+      debugPrint('VadHandlerWeb: pauseListening');
+    }
+    pauseListeningImpl();
   }
 }
 
