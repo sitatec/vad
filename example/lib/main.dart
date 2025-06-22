@@ -37,6 +37,7 @@ class _VadManagerState extends State<VadManager> {
   List<Recording> recordings = [];
   late VadHandlerBase _vadHandler;
   bool isListening = false;
+  bool isPaused = false;
   late VadSettings settings;
   final VadUIController _uiController = VadUIController();
 
@@ -48,12 +49,12 @@ class _VadManagerState extends State<VadManager> {
   }
 
   void _initializeVad() {
-    _vadHandler = VadHandler.create(isDebug: true);
+    _vadHandler = VadHandler.create(isDebug: false);
     _setupVadHandler();
   }
 
-  void _startListening() {
-    _vadHandler.startListening(
+  void _startListening() async {
+    await _vadHandler.startListening(
       frameSamples: settings.frameSamples,
       minSpeechFrames: settings.minSpeechFrames,
       preSpeechPadFrames: settings.preSpeechPadFrames,
@@ -67,13 +68,22 @@ class _VadManagerState extends State<VadManager> {
     );
     setState(() {
       isListening = true;
+      isPaused = false;
     });
   }
 
-  void _stopListening() {
-    _vadHandler.stopListening();
+  void _stopListening() async {
+    await _vadHandler.stopListening();
     setState(() {
       isListening = false;
+      isPaused = false;
+    });
+  }
+
+  void _pauseListening() async {
+    await _vadHandler.pauseListening();
+    setState(() {
+      isPaused = true;
     });
   }
 
@@ -140,13 +150,14 @@ class _VadManagerState extends State<VadManager> {
     });
   }
 
-  void _applySettings(VadSettings newSettings) {
+  void _applySettings(VadSettings newSettings) async {
     bool wasListening = isListening;
 
     // If we're currently listening, stop first
     if (isListening) {
-      _vadHandler.stopListening();
+      await _vadHandler.stopListening();
       isListening = false;
+      isPaused = false;
     }
 
     // Update settings
@@ -155,7 +166,7 @@ class _VadManagerState extends State<VadManager> {
     });
 
     // Dispose and recreate VAD handler
-    _vadHandler.dispose();
+    await _vadHandler.dispose();
     _initializeVad();
 
     // Restart listening if it was previously active
@@ -186,9 +197,11 @@ class _VadManagerState extends State<VadManager> {
     return VadUI(
       recordings: recordings,
       isListening: isListening,
+      isPaused: isPaused,
       settings: settings,
       onStartListening: _startListening,
       onStopListening: _stopListening,
+      onPauseListening: _pauseListening,
       onRequestMicrophonePermission: _requestMicrophonePermission,
       onShowSettingsDialog: _showSettingsDialog,
       controller: _uiController,
