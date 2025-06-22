@@ -1,3 +1,11 @@
+## 0.0.6
+
+* introduce `pauseListening` feature
+  - API: Add `pauseListening()` to `VadHandlerBase`.
+  - Web: implement `pauseListeningImpl()` in `vad_web.js` and expose via JS bindings.
+  - Non-Web: add `_isPaused` flag in `VadHandlerNonWeb`; ignore incoming frames when paused; if `submitUserSpeechOnPause` is true, call `forceEndSpeech()`.
+  - Start/Stop: reset `_isPaused` in `startListening()`; guard `vadInstance` in `stopListeningImpl()` with null-check and log.
+
 ## 0.0.5
 
 * Add support for Silero VAD v5 model. (Default model is set to v4)

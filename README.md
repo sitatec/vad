@@ -24,6 +24,7 @@ The package provides a simple API to start and stop VAD listening, configure VAD
             - [`create`](#create)
             - [`startListening`](#startlistening)
             - [`stopListening`](#stoplistening)
+            - [`pauseListening`](#pauselistening)
             - [`dispose`](#dispose)
         +  [Events](#events)
             - [`onSpeechEnd`](#onspeechend)
@@ -81,7 +82,7 @@ To use VAD on the web, include the following scripts within the head and body ta
 
 You can also refer to the [VAD Example App](https://github.com/keyur2maru/vad/blob/master/example/web/index.html) for a complete example.
 
-**Tip: Enable WASM multithreading (SharedArrayBuffer) for a 10x performance improvement** 
+**Tip: Enable WASM multithreading ([SharedArrayBuffer](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/SharedArrayBuffer)) for performance improvements**
 
 * For Production, send the following headers in your server response:
   ```html
@@ -361,6 +362,15 @@ Stops the VAD session.
 
 ```dart
 void stopListening();
+```
+
+#### `pauseListening`
+Pauses VAD-based listening without fully stopping the audio stream.
+
+Note: If `submitUserSpeechOnPause` was enabled, any in-flight speech will immediately be submitted (`forceEndSpeech()`).
+
+```dart
+void pauseListening();
 ```
 
 #### `dispose`
